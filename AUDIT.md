@@ -130,6 +130,22 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `real-quality` PR (real quality-manufacturing documents).**
+
+- `examples/real/` now also holds **21 CFR Part 820**, FDA's medical-device quality regulation, in its 2016
+  (QSR) and 2026 (QMSR) forms, fetched from the eCFR by me and checked against the text: a record-retention
+  requirement that the 2026 text no longer states (it moved to ISO 13485), a complaint-record item that
+  disappears, and the regulation renaming itself across three versions. 13 documents in 5 chains with the
+  two FAR sections. My section-to-chain mapping is an interpretation, stated in the folder README.
+- Live extraction, 20 gold facts written before any model ran (two documents expected to give none):
+  blind first run 17 of 20 (the 3 misses were my own wording problems; nothing invented, nothing extracted
+  from the no-fact documents), then 20 of 20 three times after clarifying the vocabulary (informed); the
+  graph matched the gold graph for 48 of 48 (key, date) pairs.
+- This addresses "mostly fictional data, and real data only in procurement". Limits: a small author-chosen
+  sample; it is still not a benchmark.
+
+---
+
 **Update after the `retrieval-asof` PR (suggestions to raise the score).**
 
 - **Retrieval plus graph:** `ask()` uses Relate's full-text index (BM25, persists in the directory store

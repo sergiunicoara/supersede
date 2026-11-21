@@ -3,5 +3,8 @@
   "simplified_acquisition.special_ceiling": "the higher dollar ceiling that applies to acquisitions described in 13.500(c); write the amount as it appears in the text, for example $3 million",
   "ethics_clause.value_threshold": "the contract value above which the Contractor Code of Business Ethics and Conduct clause must be inserted; write the amount as it appears in the text",
   "hotline_poster.value_threshold": "the contract value above which the Display of Hotline Poster(s) clause must be inserted; write the amount as it appears in the text",
-  "ethics_clause.performance_period": "the minimum performance period of a contract for the ethics clause to apply; write only the number and unit as they appear in the text, without words such as 'or more', for example 90 days"
+  "ethics_clause.performance_period": "the minimum performance period of a contract for the ethics clause to apply; write only the number and unit as they appear in the text, without words such as 'or more', for example 90 days",
+  "device_records.minimum_retention": "the minimum time that records required by the regulation must be retained, counted from release for commercial distribution; write only the number and unit as they appear in the text, for example 5 years",
+  "complaint_record.investigation_content": "an item that the record of a complaint investigation must include about the investigation itself, such as when it happened and what it found; write the item exactly as it appears in the text but without a leading article such as 'The' or 'Any'",
+  "regulation_name.scope_title": "what the regulation calls itself in its scope paragraph, in the phrase 'this ... regulation'; write the whole name including the word 'regulation' and anything in brackets after it, but without the word 'this'"
 }
