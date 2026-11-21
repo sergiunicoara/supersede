@@ -1,0 +1,11 @@
+# FICTIONAL.
+id: QP-15
+title: Nonconforming product handling procedure
+kind: controlled procedure
+authority: 3
+revisions:
+  - rev: 1
+    effective: "2024-09-01"
+    facts:
+      - {id: F-QP15-1-1, subject: retained_sample, predicate: retention_period, value: "5 years"}
+      - {id: F-QP15-1-2, subject: customer_notification, predicate: hours, value: "24"}
