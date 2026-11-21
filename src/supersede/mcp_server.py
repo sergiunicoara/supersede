@@ -61,7 +61,12 @@ def main() -> None:
     ap.add_argument("--db", default=":memory:", help="Relate database path (default: in-memory)")
     args = ap.parse_args()
     _store = Store(args.db)
-    server.run("stdio")
+    try:
+        server.run("stdio")
+    finally:
+        # Close on the store's own thread; otherwise the connection is finalised during
+        # interpreter shutdown and Relate's native layer panics.
+        _store.close()
 
 
 if __name__ == "__main__":
