@@ -75,8 +75,8 @@ thing that give different values, but only if both come from revisions that are 
 old values never count as conflicts. Each pair is reported once:
 
 ```cypher
-MATCH (da:Doc)-[:HAS_REV]->(ra:Rev)-[:ASSERTS]->(a:Fact),
-      (db:Doc)-[:HAS_REV]->(rb:Rev)-[:ASSERTS]->(b:Fact)
+MATCH (da:Doc)-[:HAS_REV]->(ra:Rev)-[:ASSERTS]->(a:Fact)
+MATCH (db:Doc)-[:HAS_REV]->(rb:Rev)-[:ASSERTS]->(b:Fact)
 WHERE a.subject = b.subject AND a.predicate = b.predicate
   AND a.value <> b.value AND a.fid < b.fid
   AND NOT (:Rev)-[:SUPERSEDES]->(ra) AND NOT (:Rev)-[:SUPERSEDES]->(rb)
@@ -84,10 +84,10 @@ RETURN ...
 ```
 
 *Variable-length history.* In plain terms: follow `SUPERSEDES` links backwards from a revision, one
-hop or many (up to 20), and list everything it replaced, nearest first:
+hop or many, however long the chain, and list everything it replaced, nearest first:
 
 ```cypher
-MATCH p=(n:Rev {id: $id})-[:SUPERSEDES*1..20]->(o:Rev)
+MATCH p=(n:Rev {id: $id})-[:SUPERSEDES*1..]->(o:Rev) WHERE o.id <> n.id
 RETURN o.id AS id, length(p) AS hops ORDER BY hops
 ```
 
@@ -138,6 +138,11 @@ queries the store from a separate thread.
 * **Probe first.** `examples/probe_cypher.py` checks the Cypher features the design needs against
   Relate; all twelve probes pass, so the queries above rest on tested support, not assumed Neo4j
   parity.
+* **Bad input must fail loudly.** An audit of my own code found that a reused fact id silently
+  overwrote another revision's fact, a missing id was a silent no-op, a cycle in `SUPERSEDES` left
+  nothing current, and the history query stopped after 20 hops. Writes now raise `ValueError` for
+  all of these, history follows the whole chain, and a conflict inside a single revision is now
+  reported. Each fix has a test.
 * **A baseline keeps you honest.** My first eval had a newest-date baseline at 9 of 13, and an
   ablation showed that following `SUPERSEDES` added nothing over dates there, because every newer
   revision was also newer by date. Real metadata is messier, so I added cases with missing, wrong
@@ -194,8 +199,8 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 34 tests (28 pass, 6 expected failures that document known edge cases), including
-  one that runs the demo end to end over MCP.
+* The suite has 37 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+  chain, a conflict inside one revision) and one that runs the demo end to end over MCP.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always
@@ -225,6 +230,17 @@ These are plans, not features in the repo today.
   runs fully offline)
 * Claude (Anthropic), used as a development assistant (see Disclosures)
 
+**Relate capabilities used:** the embedded Python DB-API (`relate.connect`, `$name` parameters,
+commit, close); a persistent directory store, also opened `read_only=True` (the committed demo
+store); `MERGE` upserts; `NOT (...)` pattern predicates; unbounded variable-length paths
+(`[:SUPERSEDES*1..]`, and `*0..` for the cycle check) with `length(p)`; multi-`MATCH` joins;
+`ORDER BY` and `count()`. **Not used:** vector or full-text search, Relate's own MCP server, the
+CLI, Bolt or HTTP, WebAssembly. Supersede exposes its own MCP server with four domain tools
+instead.
+
+**Third-party tools:** the MCP Python SDK, PyYAML and pytest; optionally the Anthropic Python SDK.
+**AI tools:** Claude (Anthropic) through Claude Code, as described in Disclosures.
+
 ## 10. Disclosures
 
 * **Started:** 21 November 2026, inside the contest period. No pre-existing project is submitted.
@@ -233,7 +249,9 @@ These are plans, not features in the repo today.
   scratch for Relate.
 * **Data:** all demo data is fictional and written for this repo. No client or third-party
   documents.
-* **AI tools:** the code, tests and documentation were developed with substantial assistance from
-  Claude (Anthropic). I directed the design and am responsible for the result.
+* **AI tools:** Claude (Anthropic), used through Claude Code, helped throughout: the code, tests,
+  the fictional corpus and eval questions, the eval and baselines, the demo scripts and the screen
+  capture of the demo, a repo audit, and the README, submission text and video script. I directed
+  the design and am responsible for the result.
 * **Third-party:** Relate (`relate-db` 1.2.0, Apache-2.0) and the MCP Python SDK. Dev only: pytest
   and PyYAML. Optional (`--llm` in the demo only): the Anthropic Python SDK.

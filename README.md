@@ -41,6 +41,13 @@ Relate is an embedded graph database with Cypher, so the supersession chains, th
 pattern, and the cross-document contradiction join are each a short Cypher query, running in the
 agent's own process. The store persists on disk between runs.
 
+Relate capabilities used: the embedded Python DB-API (`relate.connect`, `$name` parameters, commit,
+close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts; `NOT (...)`
+pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `*0..` for the cycle
+check) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. Not used: vector or
+full-text search, Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its
+own MCP server with domain tools instead.
+
 ## Quick start
 
 Requires Python 3.10 or later. No network access is needed after `pip install`.
@@ -50,7 +57,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 34 tests: 28 pass, 6 xfail (known edge cases, see AUDIT.md)
+python -m pytest -q                          # 37 tests
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -115,6 +122,11 @@ fictional corpus: 15 documents, 25 revisions, 46 facts). Open it with
 * **Stale facts.** An early version of the contradiction query compared facts across *all*
   revisions and flagged superseded ones. The current query excludes them, and a test pins that
   behavior.
+* **Strict writes.** `Store` raises `ValueError` instead of silently doing nothing: unknown
+  document or revision ids, a reused fact id (which would overwrite another revision's fact), a
+  non-integer authority, and a `SUPERSEDES` link that would close a cycle.
+* **A revision replaces the whole previous one.** Facts are not carried forward, so a fact a newer
+  revision does not restate is no longer in force.
 
 ## Disclosures (per the contest rules)
 
@@ -123,8 +135,10 @@ fictional corpus: 15 documents, 25 revisions, 46 facts). Open it with
   contradiction detection) come from the author's earlier GraphRAG work; this implementation was
   written from scratch for Relate.
 * **Data:** all demo data is fictional and written for this repo. No client or third-party documents.
-* **AI tools:** the code, tests and this README were developed with substantial assistance from
-  Claude (Anthropic). The author directed the design and is responsible for the result.
+* **AI tools:** Claude (Anthropic), used through Claude Code, helped throughout: the code, tests,
+  the fictional corpus and eval questions, the eval and baselines, the demo scripts and the screen
+  capture of the demo, a repo audit, and the README, submission text and video script. The author
+  directed the design and is responsible for the result.
 * **Third-party:** Relate (`relate-db` 1.2.0, Apache-2.0) and the MCP Python SDK. Dev only:
   pytest and PyYAML. Optional (`--llm` in the demo only): the Anthropic Python SDK.
 

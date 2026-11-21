@@ -45,6 +45,26 @@ in Part B was written before this and has not been re-scored.
 
 ---
 
+**Update after the `store-fixes` PR (D6, D7 and the capabilities list).** The `Store` defects in
+Part C are fixed and covered by tests (suite: 37 passed, no expected failures):
+
+| Defect (as audited) | Now |
+|---|---|
+| `history()` stopped after 20 hops | follows the whole chain (`*1..`); tested on 120 revisions |
+| a reused fact id overwrote another revision's fact | `ValueError`; first fact left intact; re-asserting in the same revision still updates |
+| a document without authority crashed `find_contradictions` | `add_document` requires an integer authority (`ValueError`) |
+| a conflict inside one revision was missed by `find_contradictions` | the join uses two `MATCH` clauses; reported with winner `None` |
+| missing ids were silent no-ops | `ValueError` for unknown document or revision |
+| `SUPERSEDES` cycles were accepted | refused (`ValueError`), including self-loops and indirect cycles |
+
+Behavior change to know about: invalid writes now raise instead of being ignored. The README
+documents it ("Strict writes"). Also done: the AI-use disclosure is broadened in `README.md` and
+`SUBMISSION.md` (D6), and a Relate-capabilities, third-party and AI-tools statement is in both
+(part of D10). Still open: D8 (server opens the store writable), D9 (dependency upper bounds),
+D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested).
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |
@@ -202,8 +222,8 @@ Reading:
 | D3 | No inspectable store in the repo | High (overview checklist) | Connected context, docs | Committed `examples/store/supersede-demo.relate/`, README "Where the data lives", tests | done | **This PR** |
 | D4 | README MCP config serves an empty store | High | Completeness, reproducibility | Absolute paths, venv Python, a warning about relative `--db` | done | **This PR** |
 | D5 | Eval doesn't show what `SUPERSEDES` adds (as audited: ablation 9/13 = 9/13) | High | Connected context (30 on overview), creativity | Add realistic cases where supersession and dates disagree, plus a cross-document reference chain; publish the ablation table | 3-5 h | **Done in the `eval-supersession` PR** (date cases and ablations; no cross-document reference chain yet) |
-| D6 | AI-use disclosure understates scope | High (Rules Section 3 requires it) | Eligibility | Say that code, tests, docs, corpus, eval, demo and submission text were AI-assisted | 5 min | Needs your OK (disclosure) |
-| D7 | `Store` defects: reused fid corrupts data, `None` authority crashes, history capped at 20, same-revision conflict missing, missing ids silent, cycles unguarded | Medium | Completeness | Validate inputs (fail on unknown ids, duplicate fid, non-int authority); raise or remove the cap; add a same-revision case | 1-2 h | Needs your OK (Store behavior); xfail tests are ready |
+| D6 | AI-use disclosure understates scope | High (Rules Section 3 requires it) | Eligibility | Say that code, tests, docs, corpus, eval, demo and submission text were AI-assisted | 5 min | **Done in the `store-fixes` PR** |
+| D7 | `Store` defects: reused fid corrupts data, `None` authority crashes, history capped at 20, same-revision conflict missing, missing ids silent, cycles unguarded | Medium | Completeness | Validate inputs (fail on unknown ids, duplicate fid, non-int authority); raise or remove the cap; add a same-revision case | 1-2 h | **Done in the `store-fixes` PR** (the xfail tests are now passing tests) |
 | D8 | Server opens writable; a missing `--db` path creates a store | Medium | Completeness, connected context | `--read-only` flag (or default) and refuse a non-existent `--db` | 30 min | Needs your OK |
 | D9 | Unbounded dependency versions on an experimental product (Rules Section 3) | Medium | Reproducibility | `relate-db>=1.2,<1.3`, `mcp>=2,<3` | 5 min | Needs your OK |
 | D10 | `SUBMISSION.md`: "18 tests", unbacked video sentence, no explicit capabilities list | Medium | Clarity | Update the count after merge, drop or keep the video sentence, add "Relate capabilities used" | 10 min | Needs your OK (claims) |

@@ -1,8 +1,8 @@
-"""Edge cases found in the hackathon audit (see AUDIT.md, Part C).
+"""Edge cases found in the hackathon audit (see AUDIT.md, Part C), now with their fixes.
 
-Plain tests pin behavior that is correct today. Tests marked xfail(strict=True) describe a known
-defect: they fail now (expected), and will turn into an unexpected pass, failing the suite, once
-the defect is fixed, so the marker gets removed together with the fix.
+Writes are strict: a reference to something that does not exist, a reused fact id, a non-integer
+authority, or a cycle in SUPERSEDES raises ValueError. Reads follow the whole chain and report
+conflicts inside a single revision.
 """
 import pytest
 
@@ -11,10 +11,10 @@ from supersede.store import Store
 
 def _doc(s: Store, doc: str, authority, revs: int = 1) -> list[str]:
     s.add_document(doc, doc, authority)
-    return [s.add_revision(doc, i, f"2025-01-{i:02d}") for i in range(1, revs + 1)]
+    return [s.add_revision(doc, i, f"2025-01-{(i - 1) % 28 + 1:02d}") for i in range(1, revs + 1)]
 
 
-# -- correct today -------------------------------------------------------------------------
+# -- behavior that was already correct -------------------------------------------------------
 def test_highest_authority_group_agreeing_wins_over_lower_dissent():
     s = Store()
     for doc, auth, value in (("A", 3, "x1"), ("B", 3, "x1"), ("C", 1, "x2")):
@@ -54,68 +54,81 @@ def test_values_are_compared_as_exact_strings():
     assert len(s.contradictions()) == 1
 
 
-def test_supersession_cycle_leaves_nothing_current():
-    s = Store()
-    r1, r2 = _doc(s, "A", 3, revs=2)
-    s.assert_fact(r2, "F2", "k", "p", "two")
-    s.supersede(r2, r1)
-    s.supersede(r1, r2)
-    assert s.current_revisions() == []
-    assert s.answer("k", "p")["status"] == "unknown"
-
-
-# -- known defects ---------------------------------------------------------------------------
-@pytest.mark.xfail(strict=True, reason="history() caps the SUPERSEDES traversal at 20 hops")
+# -- defects found in the audit, now fixed ---------------------------------------------------
 def test_history_lists_every_replaced_revision_in_a_long_chain():
+    """Was capped at 20 hops."""
     s = Store()
-    revs = _doc(s, "A", 3, revs=25)
+    revs = _doc(s, "A", 3, revs=120)
     for newer, older in zip(revs[1:], revs[:-1]):
         s.supersede(newer, older)
-    assert len(s.history("A-r25")) == 24
+    h = s.history("A-r120")
+    assert len(h) == 119 and h[0] == "A-r119" and h[-1] == "A-r1"
 
 
-@pytest.mark.xfail(strict=True, reason="assert_fact MERGEs on fid: a reused id rewrites the other revision's fact")
-def test_reused_fact_id_does_not_rewrite_another_revisions_fact():
+def test_reused_fact_id_is_refused_and_leaves_the_first_fact_intact():
+    """Was a silent overwrite that linked one fact node to two revisions."""
     s = Store()
     (ra,) = _doc(s, "A", 3)
     (rb,) = _doc(s, "B", 1)
     s.assert_fact(ra, "F1", "x", "p", "one")
-    s.assert_fact(rb, "F1", "y", "q", "two")
+    with pytest.raises(ValueError, match="already used"):
+        s.assert_fact(rb, "F1", "y", "q", "two")
     assert s.answer("x", "p")["value"] == "one"
+    assert s.answer("y", "q")["status"] == "unknown"
 
 
-@pytest.mark.xfail(strict=True, raises=TypeError, reason="a document without authority crashes the winner comparison")
-def test_document_without_authority_does_not_crash():
+def test_reasserting_the_same_fact_id_in_the_same_revision_updates_it():
     s = Store()
-    (ra,) = _doc(s, "A", None)
-    (rb,) = _doc(s, "B", 2)
-    s.assert_fact(ra, "F1", "k", "p", "one")
-    s.assert_fact(rb, "F2", "k", "p", "two")
-    s.contradictions()[0].winner
+    (r,) = _doc(s, "A", 3)
+    s.assert_fact(r, "F1", "x", "p", "old")
+    s.assert_fact(r, "F1", "x", "p", "new")
+    assert s.answer("x", "p")["value"] == "new"
 
 
-@pytest.mark.xfail(strict=True, reason="the contradiction join cannot bind the same HAS_REV edge twice")
+@pytest.mark.parametrize("bad", [None, "3", 2.5, True])
+def test_authority_must_be_an_integer(bad):
+    """Was a TypeError later, inside find_contradictions."""
+    with pytest.raises(ValueError, match="authority"):
+        Store().add_document("A", "a", bad)
+
+
 def test_conflict_inside_one_revision_is_listed_by_contradictions():
+    """Was invisible: the join could not bind the same HAS_REV edge twice."""
     s = Store()
     (r,) = _doc(s, "A", 3)
     s.assert_fact(r, "F1", "k", "p", "one")
     s.assert_fact(r, "F2", "k", "p", "two")
     assert s.answer("k", "p")["status"] == "unresolved"
-    assert len(s.contradictions()) == 1
+    (c,) = s.contradictions()
+    assert (c.left_doc, c.right_doc, c.winner) == ("A", "A", None)
 
 
-@pytest.mark.xfail(strict=True, reason="in a SUPERSEDES cycle history() returns the revision itself")
-def test_history_never_contains_the_revision_itself():
+def test_writes_that_reference_missing_things_raise():
+    """Were silent no-ops."""
     s = Store()
     r1, r2 = _doc(s, "A", 3, revs=2)
-    s.supersede(r2, r1)
-    s.supersede(r1, r2)
-    assert r2 not in s.history(r2)
+    with pytest.raises(ValueError, match="unknown revision"):
+        s.supersede("A-r9", "A-r1")
+    with pytest.raises(ValueError, match="unknown revision"):
+        s.supersede("A-r2", "A-r9")
+    with pytest.raises(ValueError, match="unknown revision"):
+        s.assert_fact("NOPE-r1", "F1", "x", "p", "v")
+    with pytest.raises(ValueError, match="unknown document"):
+        s.add_revision("NOPE", 1, "2025-01-01")
+    assert s.current_revisions() == [r1, r2]  # nothing was written
 
 
-@pytest.mark.xfail(strict=True, reason="writes that reference a missing document or revision are silently ignored")
-def test_superseding_a_missing_revision_raises():
+def test_supersession_cycles_are_refused():
+    """Was accepted: a cycle left no revision current and history() returned the revision itself."""
     s = Store()
-    _doc(s, "A", 3)
-    with pytest.raises(Exception):
-        s.supersede("A-r9", "A-r8")
+    r1, r2, r3 = _doc(s, "A", 3, revs=3)
+    s.supersede(r2, r1)
+    s.supersede(r3, r2)
+    with pytest.raises(ValueError, match="cycle"):
+        s.supersede(r1, r2)  # direct cycle
+    with pytest.raises(ValueError, match="cycle"):
+        s.supersede(r1, r3)  # indirect cycle
+    with pytest.raises(ValueError, match="cycle"):
+        s.supersede(r1, r1)  # self-loop
+    assert s.current_revisions() == [r3]
+    assert s.history(r3) == [r2, r1]
