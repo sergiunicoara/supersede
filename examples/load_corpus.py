@@ -17,6 +17,13 @@ sys.path.insert(0, str(ROOT / "src"))
 from supersede.store import Store  # noqa: E402
 
 CORPUS_DIR = pathlib.Path(__file__).resolve().parent / "corpus"
+TOPICS_FILE = "topics.yaml"
+
+
+def read_topics(directory: pathlib.Path = CORPUS_DIR) -> dict[str, str]:
+    """{"subject.predicate": "plain-language description"} used by Store.ask()."""
+    path = pathlib.Path(directory) / TOPICS_FILE
+    return yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def read_corpus(directory: pathlib.Path = CORPUS_DIR) -> list[dict]:
@@ -24,6 +31,8 @@ def read_corpus(directory: pathlib.Path = CORPUS_DIR) -> list[dict]:
     docs = []
     seen_facts: set[str] = set()
     for path in sorted(pathlib.Path(directory).glob("*.yaml")):
+        if path.name == TOPICS_FILE:
+            continue  # descriptions of the keys, not a document
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
         rev_numbers = {r["rev"] for r in doc["revisions"]}
         for r in doc["revisions"]:
@@ -39,7 +48,7 @@ def read_corpus(directory: pathlib.Path = CORPUS_DIR) -> list[dict]:
     return docs
 
 
-def load_docs(store: Store, docs: list[dict]) -> None:
+def load_docs(store: Store, docs: list[dict], topics: dict[str, str] | None = None) -> None:
     for d in docs:
         store.add_document(d["id"], d["title"], d["authority"])
         for r in d["revisions"]:
@@ -53,6 +62,9 @@ def load_docs(store: Store, docs: list[dict]) -> None:
         for r in d["revisions"]:
             for source in r.get("derived_from", []):
                 store.derive(f"{d['id']}-r{r['rev']}", source)
+    for key, description in (topics or {}).items():
+        subject, predicate = key.split(".", 1)
+        store.add_topic(subject, predicate, description)
     store.commit()
 
 
@@ -68,7 +80,7 @@ if __name__ == "__main__":
         sys.exit(f"{target} already exists; pass a new path (this script never merges into a store)")
     corpus = read_corpus()
     s = Store(target)
-    load_docs(s, corpus)
+    load_docs(s, corpus, read_topics())
     s.close()
     d, r, f = counts(corpus)
     print(f"loaded {d} documents, {r} revisions, {f} facts into {target}")

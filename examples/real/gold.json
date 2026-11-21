@@ -1,0 +1,29 @@
+{
+  "FAR-13-000_r1.md": {
+    "simplified_acquisition.commercial_ceiling": "$7 million",
+    "simplified_acquisition.special_ceiling": "$13 million"
+  },
+  "FAR-13-000_r2.md": {
+    "simplified_acquisition.commercial_ceiling": "$7.5 million",
+    "simplified_acquisition.special_ceiling": "$15 million"
+  },
+  "FAR-13-000_r3.md": {
+    "simplified_acquisition.commercial_ceiling": "$9 million",
+    "simplified_acquisition.special_ceiling": "$15 million"
+  },
+  "FAR-3-1004_r1.md": {
+    "ethics_clause.value_threshold": "$5.5 million",
+    "hotline_poster.value_threshold": "$5.5 million",
+    "ethics_clause.performance_period": "120 days"
+  },
+  "FAR-3-1004_r2.md": {
+    "ethics_clause.value_threshold": "$6 million",
+    "hotline_poster.value_threshold": "$6 million",
+    "ethics_clause.performance_period": "120 days"
+  },
+  "FAR-3-1004_r3.md": {
+    "ethics_clause.value_threshold": "$7.5 million",
+    "hotline_poster.value_threshold": "$7.5 million",
+    "ethics_clause.performance_period": "120 days"
+  }
+}

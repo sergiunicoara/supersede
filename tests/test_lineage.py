@@ -91,7 +91,7 @@ def test_stale_derivations_over_mcp_on_the_committed_store(tmp_path):
             return tools, r.structured_content["result"]
 
     tools, rows = asyncio.run(run())
-    assert tools == ["current_answer", "find_contradictions", "current_revisions", "revision_history",
-                     "stale_derivations"]
+    assert set(tools) == {"current_answer", "find_contradictions", "current_revisions", "revision_history",
+                          "stale_derivations", "ask", "answer_as_of", "date_warnings"}
     assert [(x["revision"], x["source"], x["hops"]) for x in rows] == [
         ("SN-0914-r1", "CSR-VEL-01-r1", 1), ("WI-12-r1", "QP-07-r1", 1), ("WI-52-r1", "QP-07-r1", 2)]

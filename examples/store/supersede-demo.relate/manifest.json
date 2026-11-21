@@ -1,31 +1,37 @@
 {
   "format_version": 5,
-  "next_node_id": 89,
+  "next_node_id": 108,
   "next_rel_id": 87,
-  "checkpoint_lsn": 103,
-  "commit_ts": 103,
+  "checkpoint_lsn": 123,
+  "commit_ts": 141,
   "node_parts": [
     {
-      "path": "nodes/0-262144-14fc627a90b2836bbb719906e3ca2bf1.parquet",
+      "path": "nodes/0-262144-b1007eba38f54e4d67022d53528b0f30.parquet",
       "id_lo": 0,
       "id_hi": 262144,
-      "rows": 89,
-      "bytes": 4777
+      "rows": 108,
+      "bytes": 6090
     }
   ],
   "rel_parts": [
     {
-      "path": "relationships/0-262144-05caba993ee2a003f39aa56639e532ed.parquet",
+      "path": "relationships/0-262144-171f4dca1c312049838bad425aca98ee.parquet",
       "id_lo": 0,
       "id_hi": 262144,
       "rows": 87,
       "bytes": 2376
     }
   ],
-  "bytes_per_node": 53.67415730337078,
+  "bytes_per_node": 56.38888888888888,
   "bytes_per_rel": 27.310344827586206,
   "codec": "parquet",
-  "indexes": [],
+  "indexes": [
+    {
+      "name": "topic_text",
+      "label": "Topic",
+      "property": "description#FULLTEXT#topic_text"
+    }
+  ],
   "constraints": [],
   "theater": {
     "databases": {
@@ -42,8 +48,36 @@
         false
       ]
     },
-    "index_details": {},
-    "index_options": {},
+    "index_details": {
+      "topic_text": {
+        "kind": "Fulltext",
+        "relationship": false,
+        "labels": [
+          "Topic"
+        ],
+        "properties": [
+          "description"
+        ],
+        "with_properties": []
+      }
+    },
+    "index_options": {
+      "topic_text": {
+        "indexConfig": {
+          "t": "map",
+          "v": {
+            "fulltext.analyzer": {
+              "t": "string",
+              "v": "standard-no-stop-words"
+            },
+            "fulltext.eventually_consistent": {
+              "t": "bool",
+              "v": false
+            }
+          }
+        }
+      }
+    },
     "graph_types": {},
     "current_graph_type": {
       "node_types": [],

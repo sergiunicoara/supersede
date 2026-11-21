@@ -1,0 +1,7 @@
+{
+  "simplified_acquisition.commercial_ceiling": "the highest dollar value of commercial acquisitions that may use the special procedures of Subpart 13.5, not counting the higher figure for acquisitions described in 13.500(c); write the amount as it appears in the text, for example $3 million",
+  "simplified_acquisition.special_ceiling": "the higher dollar ceiling that applies to acquisitions described in 13.500(c); write the amount as it appears in the text, for example $3 million",
+  "ethics_clause.value_threshold": "the contract value above which the Contractor Code of Business Ethics and Conduct clause must be inserted; write the amount as it appears in the text",
+  "hotline_poster.value_threshold": "the contract value above which the Display of Hotline Poster(s) clause must be inserted; write the amount as it appears in the text",
+  "ethics_clause.performance_period": "the minimum performance period of a contract for the ethics clause to apply; write only the number and unit as they appear in the text, without words such as 'or more', for example 90 days"
+}

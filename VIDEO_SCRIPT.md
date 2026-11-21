@@ -1,90 +1,101 @@
 # Demo video script (2:00 maximum)
 
-All numbers below come from real runs of `examples/demo_session.py` and `eval/run_eval.py` on the
-fictional corpus: 16 documents, 26 revisions, 47 facts; 19 questions; Supersede 19/19, naive
-baseline 9/19 (ablations: 15/19 with `SUPERSEDES` only, 11/19 with authority only). Re-check them
-against a fresh run before recording.
+All numbers come from real runs of `python eval/run_eval.py` and the demo scripts on the fictional
+corpus (16 documents, 26 revisions, 47 facts). Re-check them against a fresh run before recording.
+The Official Rules say the video must be your own work (filming, editing, graphic design) and may
+only use third-party music or images with permission. They do not require a spoken voice: use the
+voiceover below, or the captions in the last section.
 
-The right-hand column is the voiceover, written to be read as is. Record the screen and the voice
-separately, then line them up in the editor.
+Record the screen and the voice separately, then line them up in the editor.
 
-## Script
+## Script (voiceover)
 
 | Time | On screen | What I say |
 |---|---|---|
-| **0:00-0:15 Hook** | Title card: "Supersede", then a terminal with a document list (`ls examples/corpus`), or just the title over a dark background. | Agents that read documents have a memory problem. A procedure gets revised, but the old version stays in memory. Two documents disagree, and the agent quotes whichever came back first. Vector memory has no idea what replaced what. |
-| **0:15-0:35 Idea** | The README snippet showing `(Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact)` and `(Rev)-[:SUPERSEDES]->(Rev)`, or a simple four-box diagram of the same. Highlight `SUPERSEDES` and `authority` as they are named. | Supersede models that structure as a graph. A document has revisions. A revision asserts facts. A newer revision supersedes an older one, and every document has an authority level. Current simply means not superseded. It runs on Relate, an embedded graph database: Cypher queries, inside the same process, no server. |
-| **0:35-0:41 Demo, intro** | Terminal, `python examples/demo_session.py --pause 4` starts; the header lines appear (corpus size, five MCP tools). | This is an agent session over a fictional quality corpus, talking to Supersede through its MCP server. |
-| **0:41-0:54 Step 1, the centerpiece** | STEP 1. Baseline line: `'3 years'` from `SN-0914-r1 (shift note, authority 1)`. Then Supersede: `'10 years'` from `CSR-VEL-01-r2`, the reason line and the two `overruled` lines. Hold on this frame. | How long must retained samples be kept? The naive baseline takes the newest fact, a night-shift note: three years. Supersede answers ten years, from the customer requirement, with the reason and what it overruled. |
-| **0:54-1:10 Step 2** | STEP 2. The conflict list scrolls in; the winner lines are visible. | Next, find contradictions. It only compares current revisions, so old values are never conflicts. Each conflict comes with a winner, chosen by document authority. |
-| **1:10-1:18 Step 3** | STEP 3. `unresolved`, with the two candidates `500 parts` and `400 parts`. | Two work instructions of equal authority disagree. Supersede says unresolved, and does not guess. |
-| **1:18-1:26 Step 4** | STEP 4. `QP-07-r3 replaced QP-07-r2, then QP-07-r1`, then `'5 years'`. | Finally, revision history: revision three replaced two, then one. Only the newest counts. |
-| **1:26-1:35 Demo, wrap** | Final eval line appears; hold on it. | Same documents, same question. The difference is the graph structure. |
-| **1:35-1:50 Result** | The eval line: `Supersede 19/19` vs `naive baseline 9/19`. Optionally cut to the `run_eval.py` table. | On nineteen questions over sixteen fictional documents, Supersede answers all nineteen correctly. The naive baseline gets nine. It fails when a lower-authority source is newer, when sources conflict, and when dates are missing or wrong. Real documents will be messier. |
-| **1:50-2:00 Close** | Repo page `github.com/sergiunicoara/supersede`, MIT license visible, "Built with Relate by Neo4j" as a text line. | Supersede is open source, MIT licensed, at github dot com slash sergiunicoara slash supersede. Built with Relate by Neo4j. |
+| **0:00-0:12 Hook** | Title card "Supersede", then the README title. | Agents that read documents quote stale or conflicting facts. A procedure is revised, but the old one stays in memory. Vector memory cannot tell what replaced what. |
+| **0:12-0:32 Idea** | `docs/graph.svg` (documents, revisions, facts, SUPERSEDES, DERIVED_FROM, authority). Highlight each edge as it is named. | Supersede keeps that structure in a graph, on Relate, the embedded graph database: documents, revisions, facts, which revision supersedes which, and each document's authority. Relate's full-text index finds the right topic for a question. Cypher traversals decide which fact is in force. |
+| **0:32-1:00 Demo, session** | Capture 1: `python examples/demo_session.py --pause 2.5`. Hold on step 1 (baseline `'3 years'` vs Supersede `'10 years'` with the reason), then step 2 winners, step 3 `unresolved`, step 4 history. | A naive baseline takes the newest fact: three years, from a shift note. Supersede answers ten years, from the customer requirement, and says why. It lists real conflicts with a winner by authority, reports an equal-authority conflict as unresolved instead of guessing, and keeps only the newest revision. |
+| **1:00-1:20 Demo, plain language** | Capture 2: `python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01`, then `python examples/ask.py "Which form do inspectors fill in for final inspection results?"` (the red `STALE` line). | Ask in plain language, for any date. What sampling rule applied in July 2025? And this form number comes with a warning: its source was written from a procedure revision that has since been replaced. |
+| **1:20-1:33 Agent and web** | `docs/agent_transcript.md` (the equal-authority answer), then the web page (only if it is deployed; otherwise stay on the transcript). | A real Claude agent uses the same server over MCP, and refuses to pick between equal-authority sources. There is also a read-only web demo. |
+| **1:33-1:52 Result** | The final lines of `python eval/run_eval.py` (the plain-language and revision sections). | On twenty-three plain-language questions Supersede answers all twenty-three; the same search with a newest-date answer gets thirteen. On nineteen revision questions it gets all nineteen against nine. The data is fictional, and real documents are messier. |
+| **1:52-2:00 Close** | Repo page `github.com/sergiunicoara/supersede`, MIT license visible, text "Built with Relate by Neo4j". | Open source, MIT licensed, at github dot com slash sergiunicoara slash supersede. Built with Relate by Neo4j. |
+
+If the web demo is not deployed, drop "There is also a read-only web demo." from the 1:20 line.
 
 ## Notes on the claims
 
-* The baseline misses 10 of the 19 questions: "a lower-authority source is newer" (2: retention
-  period, film thickness); "sources conflict" (2 equal-authority questions, which no baseline can
-  pass because none reports a disagreement); "dates are missing or wrong" (6: a blank date, a 2052
-  typo, and a dropped requirement). All are explained in `eval/run_eval.py` and `CASES.md`.
-* The baseline gets the stale, agreed, unknown and chain questions right (9 of 19). Do not imply it
-  fails everywhere; the script does not.
-* Step 1 shows a baseline answer that is newer but outranked, not a superseded one. The date cases
-  (`QP-22`, `WI-31`) are where newest-wins *does* return a superseded revision, but the demo
-  session does not show them. Do not call step 1's baseline value "stale" on screen.
-* The six date-case questions were designed to separate dates from `SUPERSEDES`; do not present
-  them as typical of real documents.
+* "23 of 23 against 13": right topic first 23/23; correct answer end to end 23/23 for `ask()`, against
+  13/23 for the same retrieval answered by the newest date (name-overlap retrieval: 10/23). The first
+  run was 22/23 before "many" and "much" were added to the stop words, so do not call it a blind result.
+* "19 against 9": 19/19 on the original answer questions against the newest-date baseline's 9/19.
+  Part of the baseline's gap is by construction (no baseline can report a disagreement) and the
+  date cases were designed to separate dates from `SUPERSEDES`; the README says so.
+* "Real documents are messier" stands in for the caveat that every result is on fictional data.
+* Step 1 shows a baseline answer that is newer but outranked, not a superseded one. Do not call the
+  baseline value "stale" on screen. The red `STALE` line in the form-number answer is a different
+  thing: a revision written from a source that was later replaced.
+* The agent transcript misreads one tool result in its last answer; show only the equal-authority answer.
 
 ## Recording checklist
 
 **Setup**
-- [ ] Terminal font 18-20 pt (readable at 1080p after compression), dark theme, high contrast.
-- [ ] Window about 100 columns wide (the longest output line is 88 characters). Full output is 44
-      lines: make the window tall enough for that, or accept a scroll between steps 2 and 3.
-- [ ] Hide notifications, close other windows, and clear the prompt (`cls`).
-- [ ] Resolution 1920x1080, 30 fps. Record the screen without audio; record the voice separately.
-- [ ] Check colours on a real terminal first. They only show when output is a terminal and
-      `NO_COLOR` is not set. Winners are also marked in plain text.
+- [ ] Terminal font 18-20 pt, dark theme. Window about 100 columns wide (the longest line is 88).
+- [ ] Hide notifications, close other windows, clear the prompt.
+- [ ] 1920x1080, 30 fps. Record the screen without audio; record the voice separately.
+- [ ] Colours only show on a real terminal and when `NO_COLOR` is not set.
 
-**Commands before recording** (PowerShell, from the repo root)
+**Commands before recording** (PowerShell, from the repo root, on `main`)
 
 ```powershell
-git checkout demo-corpus
+git checkout main
 .venv\Scripts\activate
 pip install -e ".[dev]"
 python -m pytest -q
 python eval\run_eval.py
 ```
 
-Nothing needs resetting for the default run: `demo_session.py` builds a fresh store in a temporary
-directory and deletes it afterwards, so `demo.relate` is not used. If you pass `--db`, the path
-must not exist (`Remove-Item -Recurse -Force .\mydemo.relate` first).
+**Capture 1** (about 38 s): `cls; python examples\demo_session.py --pause 2.5`
 
-**Record** (about 55 s of screen at this pace, plus about 3 s of startup to cut)
+**Capture 2** (about 20 s): run the two `ask.py` commands from the table, one after the other, with a
+two-second pause between them.
 
-```powershell
-cls; python examples\demo_session.py --pause 4
-```
-
-Measured total run time (startup included): 23 s at `--pause 1.5`, 36 s at 2.5, 42 s at 3.
-At `--pause 4` expect about 55 s. Do a dry run and time it on your machine.
-
-**Alignment.** On screen at `--pause 4`, step 1 stays up about 12 s, step 2 about 16 s, steps 3 and
-4 about 8 s each, and the intro about 6 s. The spoken lines are written to fit those windows. Step
-1 is the tightest; if the voice runs past it, freeze its last frame in the editor.
+Nothing needs resetting: the demo builds its store in a temporary folder, and `ask.py` opens the
+committed store read-only.
 
 **If it runs long, cut in this order**
-1. Step 4 (revision history): drop the row and its line (about 14 words, 8 s).
-2. Shorten step 2: speed up the conflict list or stop after the first two conflicts. Cut "Each
-   conflict comes with a winner, chosen by document authority."
-3. The wrap line "Same documents, same question. The difference is the graph structure."
-4. In the idea section, drop "Current simply means not superseded."
+1. The agent and web segment (1:20), shorten to the transcript alone.
+2. Step 4 of the demo session.
+3. The second `ask.py` command.
+4. In the idea section, "Relate's full-text index finds the right topic for a question."
 
-Keep step 1, step 3 and the result: they carry the story.
+Keep the baseline-versus-Supersede comparison, the equal-authority step, and the results.
 
 **Before upload**
 - [ ] Final length at or under 2:00 (hard limit).
-- [ ] The numbers on screen match the spoken numbers: 19/19 and 9/19, sixteen documents.
-- [ ] No API keys, usernames or paths visible in the terminal.
+- [ ] Numbers on screen match the spoken numbers (23/23 and 13/23; 19/19 and 9/19; sixteen documents).
+- [ ] No API keys, usernames or paths visible in the terminal; no unlicensed music or images.
+- [ ] Viewable without a login (public or unlisted link).
+
+## Captions instead of a voice (allowed by the rules)
+
+Place one caption at the start of each segment, white text on a dark band, 2 to 4 seconds per line.
+
+| Time | Caption |
+|---|---|
+| 0:00 | Agents quote stale or conflicting facts from documents. |
+| 0:06 | A procedure is revised, but the old one stays in memory. |
+| 0:12 | Supersede: a graph on Relate (embedded graph database). |
+| 0:20 | Revisions, supersession and authority are graph structure. |
+| 0:27 | Relate's full-text index finds the topic; Cypher decides the fact in force. |
+| 0:32 | Naive baseline: newest fact = 3 years (a shift note). |
+| 0:40 | Supersede: 10 years, from the customer requirement, with the reason. |
+| 0:48 | Equal-authority conflict: reported as unresolved, not guessed. |
+| 0:56 | Only the newest revision counts. |
+| 1:00 | Ask in plain language, for any date. |
+| 1:10 | Warning: this source was written from a procedure revision that was replaced. |
+| 1:20 | A real Claude agent uses the same MCP server. |
+| 1:33 | 23 plain-language questions: 23 correct (same search, newest date: 13). |
+| 1:41 | 19 revision questions: 19 correct (newest-date baseline: 9). |
+| 1:47 | Fictional data; real documents are messier. |
+| 1:52 | Open source, MIT. github.com/sergiunicoara/supersede |
+| 1:56 | Built with Relate by Neo4j. |

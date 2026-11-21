@@ -23,6 +23,7 @@ Scoring
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from collections import OrderedDict
 
@@ -34,7 +35,7 @@ sys.path.insert(0, str(HERE.parent / "examples"))
 sys.path.insert(0, str(HERE.parent / "src"))
 
 import baseline  # noqa: E402
-from load_corpus import CORPUS_DIR, counts, load_docs, read_corpus  # noqa: E402
+from load_corpus import CORPUS_DIR, counts, load_docs, read_corpus, read_topics  # noqa: E402
 from supersede.store import Store  # noqa: E402
 
 QUESTIONS = HERE / "questions.yaml"
@@ -101,6 +102,98 @@ def evaluate_lineage(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[di
     return rows
 
 
+def _loaded(corpus_dir) -> tuple[list[dict], Store]:
+    docs = read_corpus(corpus_dir)
+    store = Store()
+    load_docs(store, docs, read_topics(corpus_dir))
+    return docs, store
+
+
+def _name_overlap_key(question: str, keys: list[str]) -> str | None:
+    """Naive retrieval: the key whose NAME shares the most words with the question (no index, no descriptions)."""
+    words = {w for w in re.findall(r"[a-z0-9]+", question.lower()) if w not in Store._STOP}
+    best, best_n = None, 0
+    for k in sorted(keys):
+        n = len(words & set(re.split(r"[_.]", k)))
+        if n > best_n:
+            best, best_n = k, n
+    return best
+
+
+def _baseline_value_ok(q: dict, key: str | None, docs: list[dict]) -> bool:
+    """Newest-date answer for a retrieved key, scored like the other baselines (value only)."""
+    if key is None:
+        return q["expected_status"] == "no_match"
+    if q["expected_status"] == "no_match" or key != q["expected_key"]:
+        return False
+    subject, predicate = key.split(".", 1)
+    return check_baseline(q, baseline.answer(docs, subject, predicate))
+
+
+def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
+    """Plain-language questions through ask(). Compares Relate full-text retrieval + graph reasoning with
+    (a) the same retrieval answered by newest date and (b) name-overlap retrieval answered by newest date."""
+    items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get("retrieval", [])
+    docs, store = _loaded(corpus_dir)
+    keys = sorted(read_topics(corpus_dir))
+    rows = []
+    try:
+        for q in items:
+            res = store.ask(q["question"])
+            m = res.get("matched")
+            key = f"{m['subject']}.{m['predicate']}" if m else None
+            ans = res.get("answer", {})
+            key_ok = key == q["expected_key"]
+            answer_ok = key_ok and res["status"] == q["expected_status"] and (
+                "expected_value" not in q or ans.get("value") == q["expected_value"])
+            if q["expected_key"] is None:
+                answer_ok = res["status"] == "no_match"
+            naive_key = _name_overlap_key(q["question"], keys)
+            rows.append({
+                "q": q, "got_key": key, "key_ok": key_ok, "ok": answer_ok,
+                "same_retrieval_newest_ok": _baseline_value_ok(q, key, docs),
+                "naive_key_ok": naive_key == q["expected_key"],
+                "naive_ok": _baseline_value_ok(q, naive_key, docs),
+            })
+    finally:
+        store.close()
+    return rows
+
+
+def _newest_fact_before(docs: list[dict], subject: str, predicate: str, day: str) -> dict:
+    """Date-only baseline: the newest dated fact on or before `day`, ignoring SUPERSEDES and authority."""
+    hits = [(r["effective"], f["id"], f["value"]) for d in docs for r in d["revisions"] for f in r["facts"]
+            if f["subject"] == subject and f["predicate"] == predicate and r["effective"] and r["effective"] <= day]
+    if not hits:
+        return {"status": "unknown"}
+    return {"status": "answered", "value": max(hits)[2]}
+
+
+def check_as_of(q: dict, got: dict) -> bool:
+    if got.get("status") != q["expected_status"]:
+        return False
+    if "expected_value" in q and got.get("value") != q["expected_value"]:
+        return False
+    src = q.get("expected_source")
+    if src is not None and src != got.get("source") and src not in got.get("sources", []):
+        return False
+    return {w["issue"] for w in got.get("warnings", [])} == set(q.get("expected_warnings", []))
+
+
+def evaluate_as_of(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
+    items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get("as_of", [])
+    docs, store = _loaded(corpus_dir)
+    rows = []
+    try:
+        for q in items:
+            got = store.answer(q["subject"], q["predicate"], as_of=q["date"])
+            base = _newest_fact_before(docs, q["subject"], q["predicate"], q["date"])
+            rows.append({"q": q, "got": got, "ok": check_as_of(q, got), "base_ok": check_baseline(q, base)})
+    finally:
+        store.close()
+    return rows
+
+
 def _show(got: dict) -> str:
     if got["status"] == "unknown":
         return "unknown"
@@ -142,7 +235,26 @@ def main() -> int:
     print(f"\nLineage (DERIVED_FROM chains across documents): Supersede {sum(x['ok'] for x in lin)}/{len(lin)}"
           f"  [{', '.join(x['item']['id'] + ' ' + ('PASS' if x['ok'] else 'FAIL') for x in lin)}]"
           "  (baselines: not applicable, they keep no derivation structure)")
-    return 0 if s_ok == n and all(x["ok"] for x in lin) else 1
+
+    ret = evaluate_retrieval()
+    nr = len(ret)
+    print(f"\nPlain-language questions through ask() ({nr}; {sum(1 for x in ret if x['q']['expected_key'] is None)} are off-topic):")
+    print(f"  retrieval, right topic first:  Relate full-text {sum(x['key_ok'] for x in ret)}/{nr}"
+          f"   name-overlap baseline {sum(x['naive_key_ok'] for x in ret)}/{nr}")
+    print(f"  answer correct end to end:     ask() {sum(x['ok'] for x in ret)}/{nr}"
+          f"   same retrieval + newest date {sum(x['same_retrieval_newest_ok'] for x in ret)}/{nr}"
+          f"   name-overlap + newest date {sum(x['naive_ok'] for x in ret)}/{nr}")
+    for x in ret:
+        if not x["ok"]:
+            print(f"    ask() missed {x['q']['id']}: {x['q']['question']!r} -> topic {x['got_key']} (expected {x['q']['expected_key']})")
+    asof = evaluate_as_of()
+    na = len(asof)
+    print(f"\nWhat was in force on a date ({na}): Supersede {sum(x['ok'] for x in asof)}/{na}"
+          f"   newest fact on or before the date {sum(x['base_ok'] for x in asof)}/{na}")
+    for x in asof:
+        if not x["ok"]:
+            print(f"    as-of missed {x['q']['id']}: {x['got']}")
+    return 0 if s_ok == n and all(x["ok"] for x in lin) and all(x["ok"] for x in asof) else 1
 
 
 if __name__ == "__main__":

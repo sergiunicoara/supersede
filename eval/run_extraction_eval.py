@@ -1,6 +1,9 @@
 """Measure automatic fact extraction on the unannotated example documents (LIVE: calls the API).
 
-Usage:  ANTHROPIC_API_KEY=... python eval/run_extraction_eval.py [--model M]
+Usage:  ANTHROPIC_API_KEY=... python eval/run_extraction_eval.py [--dir examples/real] [--model M]
+
+--dir picks the document folder (default examples/documents_raw; examples/real holds real federal
+regulation text). Each folder has its own vocabulary.json and gold.json.
 
 For each document in examples/documents_raw/ it extracts facts with the vocabulary guard rails
 (src/supersede/extract.py) and compares them with examples/documents_raw/gold.json, which was written
@@ -28,10 +31,10 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from supersede.extract import DEFAULT_MODEL, _norm, extract_facts, load_vocabulary  # noqa: E402
-from supersede.ingest import load_revisions, parse, split_document  # noqa: E402
+from supersede.ingest import document_files, load_revisions, parse, split_document  # noqa: E402
 from supersede.store import Store  # noqa: E402
 
-RAW = ROOT / "examples" / "documents_raw"
+RAW = ROOT / "examples" / "documents_raw"  # default folder
 
 
 def score(extracted: dict[str, str], gold: dict[str, str]) -> tuple[int, int, int]:
@@ -61,10 +64,12 @@ def _store(revisions, facts_by_doc: dict[str, dict[str, str]]) -> Store:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--dir", default=str(RAW), help="folder with the documents, vocabulary.json and gold.json")
     args = ap.parse_args()
-    vocab = load_vocabulary(RAW / "vocabulary.json")
-    gold: dict[str, dict[str, str]] = json.loads((RAW / "gold.json").read_text(encoding="utf-8"))
-    files = sorted(RAW.glob("*.md"))
+    folder = pathlib.Path(args.dir)
+    vocab = load_vocabulary(folder / "vocabulary.json")
+    gold: dict[str, dict[str, str]] = json.loads((folder / "gold.json").read_text(encoding="utf-8"))
+    files = document_files(folder)
     assert {f.name for f in files} == set(gold), "gold.json and the documents do not match"
 
     revisions, extracted_by_doc, rejected_all = [], {}, []
@@ -101,13 +106,19 @@ def main() -> int:
 
     gold_store, got_store = _store(revisions, gold), _store(revisions, extracted_by_doc)
     keys = sorted(vocab)
-    same = 0
-    for k in keys:
-        s, pred = k.split(".", 1)
-        a, b = gold_store.answer(s, pred), got_store.answer(s, pred)
-        same += (a.get("status"), a.get("value")) == (b.get("status"), b.get("value"))
+
+    def same_answer(a: dict, b: dict) -> bool:
+        return (a.get("status"), a.get("value")) == (b.get("status"), b.get("value"))
+
+    same = sum(same_answer(gold_store.answer(*k.split(".", 1)), got_store.answer(*k.split(".", 1))) for k in keys)
     print(f"\nEnd to end: the graph built from extracted facts gives the same answer as the gold graph for "
-          f"{same} of {len(keys)} vocabulary keys.")
+          f"{same} of {len(keys)} vocabulary keys today,")
+    # and for every date on which a revision took effect, so supersession over the real history is checked too
+    days = sorted({r.effective for r in revisions if Store._day(r.effective)})
+    pairs = [(k, d) for k in keys for d in days]
+    same_t = sum(same_answer(gold_store.answer(*k.split(".", 1), as_of=d), got_store.answer(*k.split(".", 1), as_of=d))
+                 for k, d in pairs)
+    print(f"and for {same_t} of {len(pairs)} (key, date) pairs, one date per revision effective date.")
     gold_store.close()
     got_store.close()
     return 0
