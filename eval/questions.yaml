@@ -24,3 +24,26 @@ questions:
   - {id: q17, case: date_error, subject: fastening, predicate: cover_bolt_torque, expected_status: agreed, expected_value: "24 Nm", expected_source: QP-22-r2}
   - {id: q18, case: withdrawn, subject: leak_test, predicate: retest_allowed, expected_status: unknown}
   - {id: q19, case: withdrawn, subject: fastening, predicate: thread_locker, expected_status: unknown}
+
+# Cross-document lineage (DERIVED_FROM). The baselines keep no such structure, so they are not scored here.
+lineage:
+  - id: l1
+    case: lineage
+    ask: stale_derivations
+    expected:
+      - {revision: SN-0914-r1, source: CSR-VEL-01-r1, hops: 1, replaced_by: [CSR-VEL-01-r2]}
+      - {revision: WI-12-r1, source: QP-07-r1, hops: 1, replaced_by: [QP-07-r3]}
+      - {revision: WI-52-r1, source: QP-07-r1, hops: 2, replaced_by: [QP-07-r3]}
+  - id: l2
+    case: lineage
+    ask: lineage
+    revision: WI-52-r1
+    expected:
+      - {source: WI-12-r1, hops: 1, current: true, replaced_by: []}
+      - {source: QP-07-r1, hops: 2, current: false, replaced_by: [QP-07-r3]}
+  - id: l3
+    case: lineage
+    ask: lineage
+    revision: WI-24-r1
+    expected:
+      - {source: WI-20-r1, hops: 1, current: true, replaced_by: []}

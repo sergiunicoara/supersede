@@ -1,7 +1,7 @@
 # Demo video script (2:00 maximum)
 
 All numbers below come from real runs of `examples/demo_session.py` and `eval/run_eval.py` on the
-fictional corpus: 15 documents, 25 revisions, 46 facts; 19 questions; Supersede 19/19, naive
+fictional corpus: 16 documents, 26 revisions, 47 facts; 19 questions; Supersede 19/19, naive
 baseline 9/19 (ablations: 15/19 with `SUPERSEDES` only, 11/19 with authority only). Re-check them
 against a fresh run before recording.
 
@@ -14,13 +14,13 @@ separately, then line them up in the editor.
 |---|---|---|
 | **0:00-0:15 Hook** | Title card: "Supersede", then a terminal with a document list (`ls examples/corpus`), or just the title over a dark background. | Agents that read documents have a memory problem. A procedure gets revised, but the old version stays in memory. Two documents disagree, and the agent quotes whichever came back first. Vector memory has no idea what replaced what. |
 | **0:15-0:35 Idea** | The README snippet showing `(Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact)` and `(Rev)-[:SUPERSEDES]->(Rev)`, or a simple four-box diagram of the same. Highlight `SUPERSEDES` and `authority` as they are named. | Supersede models that structure as a graph. A document has revisions. A revision asserts facts. A newer revision supersedes an older one, and every document has an authority level. Current simply means not superseded. It runs on Relate, an embedded graph database: Cypher queries, inside the same process, no server. |
-| **0:35-0:41 Demo, intro** | Terminal, `python examples/demo_session.py --pause 4` starts; the header lines appear (corpus size, four MCP tools). | This is an agent session over a fictional quality corpus, talking to Supersede through its MCP server. |
+| **0:35-0:41 Demo, intro** | Terminal, `python examples/demo_session.py --pause 4` starts; the header lines appear (corpus size, five MCP tools). | This is an agent session over a fictional quality corpus, talking to Supersede through its MCP server. |
 | **0:41-0:54 Step 1, the centerpiece** | STEP 1. Baseline line: `'3 years'` from `SN-0914-r1 (shift note, authority 1)`. Then Supersede: `'10 years'` from `CSR-VEL-01-r2`, the reason line and the two `overruled` lines. Hold on this frame. | How long must retained samples be kept? The naive baseline takes the newest fact, a night-shift note: three years. Supersede answers ten years, from the customer requirement, with the reason and what it overruled. |
 | **0:54-1:10 Step 2** | STEP 2. The conflict list scrolls in; the winner lines are visible. | Next, find contradictions. It only compares current revisions, so old values are never conflicts. Each conflict comes with a winner, chosen by document authority. |
 | **1:10-1:18 Step 3** | STEP 3. `unresolved`, with the two candidates `500 parts` and `400 parts`. | Two work instructions of equal authority disagree. Supersede says unresolved, and does not guess. |
 | **1:18-1:26 Step 4** | STEP 4. `QP-07-r3 replaced QP-07-r2, then QP-07-r1`, then `'5 years'`. | Finally, revision history: revision three replaced two, then one. Only the newest counts. |
 | **1:26-1:35 Demo, wrap** | Final eval line appears; hold on it. | Same documents, same question. The difference is the graph structure. |
-| **1:35-1:50 Result** | The eval line: `Supersede 19/19` vs `naive baseline 9/19`. Optionally cut to the `run_eval.py` table. | On nineteen questions over fifteen fictional documents, Supersede answers all nineteen correctly. The naive baseline gets nine. It fails when a lower-authority source is newer, when sources conflict, and when dates are missing or wrong. Real documents will be messier. |
+| **1:35-1:50 Result** | The eval line: `Supersede 19/19` vs `naive baseline 9/19`. Optionally cut to the `run_eval.py` table. | On nineteen questions over sixteen fictional documents, Supersede answers all nineteen correctly. The naive baseline gets nine. It fails when a lower-authority source is newer, when sources conflict, and when dates are missing or wrong. Real documents will be messier. |
 | **1:50-2:00 Close** | Repo page `github.com/sergiunicoara/supersede`, MIT license visible, "Built with Relate by Neo4j" as a text line. | Supersede is open source, MIT licensed, at github dot com slash sergiunicoara slash supersede. Built with Relate by Neo4j. |
 
 ## Notes on the claims
@@ -86,5 +86,5 @@ Keep step 1, step 3 and the result: they carry the story.
 
 **Before upload**
 - [ ] Final length at or under 2:00 (hard limit).
-- [ ] The numbers on screen match the spoken numbers: 19/19 and 9/19, fifteen documents.
+- [ ] The numbers on screen match the spoken numbers: 19/19 and 9/19, sixteen documents.
 - [ ] No API keys, usernames or paths visible in the terminal.

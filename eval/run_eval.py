@@ -84,6 +84,23 @@ def evaluate(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
     return rows
 
 
+def evaluate_lineage(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
+    """Cross-document lineage checks (DERIVED_FROM). Only Supersede is scored: the baselines keep no
+    derivation structure, so there is nothing for them to answer."""
+    docs = read_corpus(corpus_dir)
+    items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get("lineage", [])
+    store = Store()
+    load_docs(store, docs)
+    rows = []
+    try:
+        for it in items:
+            got = store.stale_derivations() if it["ask"] == "stale_derivations" else store.lineage(it["revision"])
+            rows.append({"item": it, "got": got, "ok": got == it["expected"]})
+    finally:
+        store.close()
+    return rows
+
+
 def _show(got: dict) -> str:
     if got["status"] == "unknown":
         return "unknown"
@@ -121,7 +138,11 @@ def main() -> int:
     print(f"{'TOTAL':<13} {n:>9} {s_ok:>6}/{n:<3} {b_ok:>8}/{n:<3} {sup_ok:>14}/{n:<4} {aut_ok:>12}/{n:<3}")
     print(f"\nSupersede: {s_ok}/{n} passed.  Baseline (newest effective date, no graph): {b_ok}/{n} passed.")
     print(f"Ablations: supersession-aware only {sup_ok}/{n}, authority-aware only {aut_ok}/{n}.")
-    return 0 if s_ok == n else 1
+    lin = evaluate_lineage()
+    print(f"\nLineage (DERIVED_FROM chains across documents): Supersede {sum(x['ok'] for x in lin)}/{len(lin)}"
+          f"  [{', '.join(x['item']['id'] + ' ' + ('PASS' if x['ok'] else 'FAIL') for x in lin)}]"
+          "  (baselines: not applicable, they keep no derivation structure)")
+    return 0 if s_ok == n and all(x["ok"] for x in lin) else 1
 
 
 if __name__ == "__main__":

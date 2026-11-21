@@ -20,8 +20,9 @@ server = MCPServer(
     instructions=(
         "Query a revision-aware knowledge graph. Use current_answer for 'what is in force', "
         "find_contradictions to audit conflicts between current revisions, and "
-        "revision_history to see what a revision replaced. Superseded facts are history, "
-        "never conflicts."
+        "revision_history to see what a revision replaced, and stale_derivations to find current "
+        "revisions that were written from a source that has since been superseded. Superseded "
+        "facts are history, never conflicts."
     ),
 )
 _store: Store | None = None
@@ -54,6 +55,13 @@ def current_revisions() -> list[str]:
 def revision_history(rev_id: str) -> list[str]:
     """Revisions that `rev_id` replaced, nearest first."""
     return _s().history(rev_id)
+
+
+@server.tool()
+def stale_derivations() -> list[dict]:
+    """Current revisions written from a source revision that has since been superseded, with the
+    source, how many derivation hops away it is, and the revision(s) that replaced it."""
+    return _s().stale_derivations()
 
 
 def main() -> None:

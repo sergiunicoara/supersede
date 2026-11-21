@@ -29,8 +29,11 @@ comes from, and how much that document outranks another (authority).
 
 ```
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
-(Rev)-[:SUPERSEDES]->(Rev)
+(Rev)-[:SUPERSEDES]->(Rev)          // within one document: newer replaces older
+(Rev)-[:DERIVED_FROM]->(Rev)        // across documents: written from that revision
 ```
+
+![The Supersede graph model: documents, revisions, facts, SUPERSEDES within a document, DERIVED_FROM across documents](docs/graph.svg)
 
   * **Current** means "not superseded". It is a graph pattern, not a date comparison.
   * A **contradiction** exists only between facts in *current* revisions. A fact from a superseded
@@ -39,6 +42,9 @@ comes from, and how much that document outranks another (authority).
     controlled procedure > work instruction > shift note or email). If authority ties, Supersede
     says *unresolved* instead of guessing.
   * Every answer carries its **reason** and the **overruled** sources.
+  * **Lineage:** a revision can record which revision of another document it was written from.
+    `stale_derivations` follows those links, directly or through a chain, and lists current
+    revisions that rest on a source that has since been superseded, and what replaced it.
 
 ```
 current_answer("final_inspection", "sampling")
@@ -53,29 +59,29 @@ agent's own process.
 
 **Relate capabilities used:** the embedded Python DB-API (`relate.connect`, `$name` parameters,
 commit, close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts;
-`NOT (...)` pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `*0..` for the
-cycle check) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. **Not used:** vector or
+`NOT (...)` pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `[:DERIVED_FROM*1..]`,
+`*0..` for the cycle checks) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. **Not used:** vector or
 full-text search, Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its
 own MCP server with domain tools instead.
 
 ## Setup and run
 
 Requires Python 3.10 or later. No network access is needed after `pip install`. CI runs the tests,
-the eval, the demo and the ingestion on Linux, macOS and Windows with Python 3.10 and 3.12.
+the eval, the demo and the ingestion on Linux, macOS and Windows with Python 3.10, 3.11, 3.12 and 3.13.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 52 tests
+python -m pytest -q                          # 59 tests
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
 
 ### Demo
 
-A scripted agent session over a larger fictional corpus (15 documents, 25 revisions, 46 facts;
+A scripted agent session over a larger fictional corpus (16 documents, 26 revisions, 47 facts;
 the cases are described in [examples/corpus/CASES.md](examples/corpus/CASES.md)). It starts the
 MCP server over stdio, connects as an MCP client, and runs four steps: a naive baseline vs
 `current_answer`, `find_contradictions`, an equal-authority conflict reported as `unresolved`,
@@ -91,7 +97,8 @@ read from the environment only and is never stored.
 
 ### Use it from an MCP client
 
-Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`.
+Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`,
+`stale_derivations`.
 
 Every tool only reads, so the server opens an existing store **read-only**, and it refuses a
 `--db` path that does not exist. MCP hosts start the server from their own working directory, so
@@ -125,6 +132,7 @@ authority: 3
 revision: 2
 effective: 2025-10-01
 supersedes: 1
+derived_from: QP-07-r1   # optional: revision(s) of other documents it was written from
 ---
 Finished castings are packed {{packaging.units_per_box = 24}} to a box.
 ```
@@ -140,7 +148,7 @@ Programmatic use: `supersede.ingest.ingest_directory(store, folder)`.
 
 A persistent store you can inspect is committed at
 [`examples/store/supersede-demo.relate/`](examples/store/) (directory mode, built from the
-fictional corpus: 15 documents, 25 revisions, 46 facts). Open it with
+fictional corpus: 16 documents, 26 revisions, 47 facts). Open it with
 `relate.connect(path, read_only=True)` or point the MCP server at it;
 [examples/store/README.md](examples/store/README.md) has the commands and how to regenerate it.
 `demo.relate` from the setup commands is a separate local store and is not committed.

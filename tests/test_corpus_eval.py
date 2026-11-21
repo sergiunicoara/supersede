@@ -26,7 +26,7 @@ def loaded() -> Store:
 def test_corpus_loads():
     docs = read_corpus()
     d, r, f = counts(docs)
-    assert (d, r, f) == (15, 25, 46)
+    assert (d, r, f) == (16, 26, 47)
     assert {doc["authority"] for doc in docs} == {1, 2, 3, 4}
     assert any(len(doc["revisions"]) == 3 for doc in docs)
     s = loaded()
@@ -38,8 +38,9 @@ def test_corpus_loads():
 def test_every_case_in_cases_md_has_a_question():
     cases = set(re.findall(r"^## Case `(\w+)`", CASES_MD.read_text(encoding="utf-8"), re.M))
     assert cases == {"stale", "authority", "unresolved", "agreed", "unknown", "chain",
-                     "missing_date", "date_error", "withdrawn"}
-    used = {q["case"] for q in QUESTIONS}
+                     "missing_date", "date_error", "withdrawn", "lineage"}
+    lineage = yaml.safe_load((ROOT / "eval" / "questions.yaml").read_text(encoding="utf-8"))["lineage"]
+    used = {q["case"] for q in QUESTIONS} | {x["case"] for x in lineage}
     assert cases <= used, f"cases without a question: {cases - used}"
     assert used <= cases, f"questions with an undocumented case: {used - cases}"
 
@@ -93,6 +94,11 @@ def test_ablations_separate_what_each_part_of_the_graph_buys():
     assert per["authority"]["supersession"] < per["authority"]["n"]
     # equal-authority ties: no baseline can report a disagreement
     assert per["unresolved"]["newest"] == per["unresolved"]["supersession"] == per["unresolved"]["authority"] == 0
+
+
+def test_lineage_checks_pass():
+    rows = run_eval.evaluate_lineage()
+    assert len(rows) == 3 and all(x["ok"] for x in rows), [x["item"]["id"] for x in rows if not x["ok"]]
 
 
 def test_blank_effective_date_loads_and_is_a_string():

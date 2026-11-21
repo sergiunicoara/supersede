@@ -43,7 +43,7 @@ you can query; contradictions are only looked for between current revisions, so 
 raise false alarms; and when equal-authority sources disagree it says `unresolved` rather than
 returning one of them.
 
-Supersede runs as an MCP server, so any MCP-capable agent can use it. The four tools:
+Supersede runs as an MCP server, so any MCP-capable agent can use it. The five tools:
 
 | Tool | What it returns |
 |---|---|
@@ -51,6 +51,7 @@ Supersede runs as an MCP server, so any MCP-capable agent can use it. The four t
 | `find_contradictions()` | All conflicts between facts in current revisions, with the authority-based winner (or `null` on a tie) |
 | `current_revisions()` | Revision ids that have not been superseded |
 | `revision_history(rev_id)` | The revisions that `rev_id` replaced, nearest first |
+| `stale_derivations()` | Current revisions written from a source revision (in another document, directly or through a chain) that has since been superseded, with what replaced it |
 
 ## 4. How Relate is used
 
@@ -58,7 +59,8 @@ Supersede runs as an MCP server, so any MCP-capable agent can use it. The four t
 
 ```
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
-(Rev)-[:SUPERSEDES]->(Rev)
+(Rev)-[:SUPERSEDES]->(Rev)       // within one document
+(Rev)-[:DERIVED_FROM]->(Rev)     // across documents: written from that revision
 ```
 
 **Key Cypher patterns** (all from `src/supersede/store.py`)
@@ -94,6 +96,20 @@ RETURN o.id AS id, length(p) AS hops ORDER BY hops
 The same three-hop traversal `Doc -> Rev -> Fact` also drives `current_answer`, carrying each
 fact's document authority so the winner can be explained.
 
+*Stale derivations across documents.* In plain terms: follow `DERIVED_FROM` links from a revision
+that is still in force, one hop or several, and report any source along the way that has since been
+superseded:
+
+```cypher
+MATCH p=(r:Rev)-[:DERIVED_FROM*1..]->(s:Rev)
+WHERE NOT (:Rev)-[:SUPERSEDES]->(r) AND (:Rev)-[:SUPERSEDES]->(s)
+RETURN r.id AS revision, s.id AS source, length(p) AS hops ORDER BY revision, hops, source
+```
+
+In the demo corpus an operator card (`WI-52`) was written from a work instruction (`WI-12`) that was
+written from the first revision of a procedure (`QP-07`); that revision has since been replaced
+twice, so both documents are flagged two and one hops away, with the current revision named.
+
 **Persistent store mode.** The server uses Relate's on-disk store (`--db path`; Relate keeps it as
 a directory), with `:memory:` as the default for tests. Memory-only would lose the revision history
 between runs, and history is the whole point of the project. A test (`test_persists_across_reopen`)
@@ -107,14 +123,14 @@ subqueries, `MERGE`, and others) and prints PASS/FAIL for each, so the design re
 Cypher support surface rather than assumed Neo4j parity.
 
 The store (`Store`) wraps Relate with a small write API (add document, add revision, supersede,
-assert fact) and the read queries above. The MCP server exposes the four tools using the MCP Python
+assert fact) and the read queries above. The MCP server exposes the five tools using the MCP Python
 SDK; every tool only reads, so it opens an existing store read-only and refuses a path that does
 not exist. `examples/mcp_smoke.py` spawns the server over stdio and calls it the way an agent would.
 Documents can be loaded from annotated Markdown (`python -m supersede.ingest`): one file per
 revision, a small header, and facts marked inline with `{{subject.predicate = value}}`.
 
-To test it beyond a handful of facts I wrote a fictional automotive-quality corpus (15 documents,
-25 revisions, 46 facts; `examples/corpus/`) with nine deliberate cases (`CASES.md`), a 19-question
+To test it beyond a handful of facts I wrote a fictional automotive-quality corpus (16 documents,
+26 revisions, 47 facts; `examples/corpus/`) with nine deliberate cases (`CASES.md`), a 19-question
 eval (`eval/run_eval.py`), a naive baseline and two ablations for comparison (`eval/baseline.py`), and a scripted
 agent session that drives the MCP server end to end (`examples/demo_session.py`), which the demo
 video follows.
@@ -154,8 +170,8 @@ queries the store from a separate thread.
 
 ## 7. Results
 
-Measured with `python eval/run_eval.py` on the fictional corpus (15 documents, 25 revisions,
-46 facts) and 19 questions, two or three per case (`examples/corpus/CASES.md`). Supersede answers
+Measured with `python eval/run_eval.py` on the fictional corpus (16 documents, 26 revisions,
+47 facts) and 19 questions, two or three per case (`examples/corpus/CASES.md`). Supersede answers
 through `Store.answer()`. The **naive baseline** (`eval/baseline.py`) ignores `SUPERSEDES` and
 authority and returns the fact from the most recent effective date across all documents. Two
 **ablations** each keep one part of the graph: *supersession-aware* (skips superseded revisions,
@@ -202,7 +218,7 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 52 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+* The suite has 59 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
   chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
   a store byte-identical, and one that runs the demo end to end over MCP.
 
@@ -240,7 +256,7 @@ commit, close); a persistent directory store, also opened `read_only=True` (the 
 store); `MERGE` upserts; `NOT (...)` pattern predicates; unbounded variable-length paths
 (`[:SUPERSEDES*1..]`, and `*0..` for the cycle check) with `length(p)`; multi-`MATCH` joins;
 `ORDER BY` and `count()`. **Not used:** vector or full-text search, Relate's own MCP server, the
-CLI, Bolt or HTTP, WebAssembly. Supersede exposes its own MCP server with four domain tools
+CLI, Bolt or HTTP, WebAssembly. Supersede exposes its own MCP server with five domain tools
 instead.
 
 **Third-party tools:** the MCP Python SDK, PyYAML and pytest; optionally the Anthropic Python SDK.

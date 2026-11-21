@@ -10,6 +10,7 @@ in the prose with ``{{subject.predicate = value}}``:
     revision: 2
     effective: 2025-10-01
     supersedes: 1            # optional: the revision number of the same document it replaces
+    derived_from: QP-07-r1   # optional: revision(s) of OTHER documents it was written from
     ---
     Parts are packed {{packaging.units_per_box = 24}} to a box, labelled in
     {{packaging.label_language = English and German}}.
@@ -43,6 +44,7 @@ class Revision:
     supersedes: int | None
     facts: tuple[tuple[str, str, str], ...]  # (subject, predicate, value)
     source: str
+    derived_from: tuple[str, ...] = ()       # revision ids such as "QP-07-r1"
 
 
 def parse(text: str, source: str = "<text>") -> Revision:
@@ -73,7 +75,9 @@ def parse(text: str, source: str = "<text>") -> Revision:
         raise ValueError(f"{source}: authority, revision and supersedes must be integers") from None
     body = "\n".join(lines[end + 1:])
     facts = tuple((m.group(1), m.group(2), m.group(3)) for m in _FACT.finditer(body))
-    return Revision(meta["doc"], meta["title"], authority, rev, meta["effective"], supersedes, facts, source)
+    derived = tuple(x.strip() for x in meta.get("derived_from", "").split(",") if x.strip())
+    return Revision(meta["doc"], meta["title"], authority, rev, meta["effective"], supersedes, facts,
+                    source, derived)
 
 
 def ingest_directory(store: Store, directory: str | os.PathLike) -> tuple[int, int, int]:
@@ -92,6 +96,10 @@ def ingest_directory(store: Store, directory: str | os.PathLike) -> tuple[int, i
                              f"{authority[r.doc][0]}")
         if r.supersedes is not None and (r.doc, r.supersedes) not in {(x.doc, x.rev) for x in revisions}:
             raise ValueError(f"{r.source}: supersedes revision {r.supersedes} of {r.doc}, which was not found")
+        known = {f"{x.doc}-r{x.rev}" for x in revisions}
+        for src in r.derived_from:
+            if src not in known:
+                raise ValueError(f"{r.source}: derived_from {src!r}, which was not found")
     for r in revisions:
         store.add_document(r.doc, r.title, r.authority)
     ordered = sorted(revisions, key=lambda r: (r.doc, r.rev))
@@ -104,6 +112,9 @@ def ingest_directory(store: Store, directory: str | os.PathLike) -> tuple[int, i
     for r in ordered:
         if r.supersedes is not None:
             store.supersede(f"{r.doc}-r{r.rev}", f"{r.doc}-r{r.supersedes}")
+    for r in ordered:
+        for src in r.derived_from:
+            store.derive(f"{r.doc}-r{r.rev}", src)
     store.commit()
     return len(authority), len(revisions), n_facts
 

@@ -100,3 +100,21 @@ superseded r1 value.
 Expected: `unknown`. The data model treats a revision as replacing the whole previous one, so a fact
 that is not restated is not in force. This is a modelling choice: Supersede cannot tell a
 deliberately withdrawn requirement from one the author forgot to carry over (see AUDIT.md).
+
+## Case `lineage`: a current revision rests on a source that has since been superseded
+
+A revision can record which revision of **another** document it was written from (`DERIVED_FROM`).
+Following those links across documents shows when a current revision is built on something that
+was replaced. This is not a question about a value, so it is checked separately from the answer
+questions, and the baselines are not scored on it: they keep no derivation structure.
+
+* `WI-12` r1 was written from `QP-07` r1 (it copied the old 100% inspection rule). `QP-07` r1 was
+  replaced by r2 and then r3, so `WI-12` r1 is stale, and the replacement is `QP-07` r3.
+* `WI-52` r1 (operator card) was written from `WI-12` r1: a two-hop chain `WI-52` r1 → `WI-12` r1 →
+  `QP-07` r1. `WI-52` r1 is stale too, two hops away.
+* `SN-0914` r1 quoted `CSR-VEL-01` r1, which `CSR-VEL-01` r2 replaced.
+* Control: `WI-24` r1 was written from `WI-20` r1, which is still current, so it must **not** be
+  flagged.
+
+Expected: `stale_derivations` lists exactly `SN-0914-r1`, `WI-12-r1` and `WI-52-r1`;
+`lineage("WI-52-r1")` lists `WI-12-r1` (current) then `QP-07-r1` (superseded, replaced by `QP-07-r3`).
