@@ -397,3 +397,10 @@ Reading:
 | D13 | Windows activation and Python version missing from README | Low | Reproducibility | Added | done | **This PR** |
 | D14 | Personal e-mail address in commit metadata | Low (privacy) | none | Leave it (no history rewrite); set a noreply e-mail address for future commits | 2 min | Repo-local git e-mail set to the GitHub noreply address for future commits; existing history untouched |
 | D15 | Untested: Python 3.10, macOS, Linux | Low | Reproducibility | One run on each, or a CI matrix | 30 min | **Done** (PR 9; Python 3.11 and 3.13 added in the lineage PR) |
+
+**Update after the `hybrid-retrieval` PR.** `ask()` now fuses Relate's full-text and vector indexes (reciprocal rank,
+k=60; Relate's `COMBINE` is preview) over topic descriptions, with a dependency-free hashing embedder (word forms and
+typos, not synonyms; pluggable). Measured honestly in `docs/EVIDENCE.md`: hybrid 23/23 on the original questions and
+16/18 on 18 reworded ones, against 23 and 15 for full-text and 21 and 18 for vector-only: a modest, not decisive,
+difference. Threshold chosen on a separate calibration set; the earlier "vector search not used" statements are removed.
+Suite 168 (167 without a key).

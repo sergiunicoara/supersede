@@ -15,6 +15,8 @@ from typing import Any
 
 import relate
 
+from .embed import Embedder, HashingEmbedder, content_words
+
 
 @dataclass(frozen=True)
 class Contradiction:
@@ -45,8 +47,13 @@ class Store:
     executor keeps one connection valid for both file and in-memory databases.
     """
 
-    def __init__(self, path: str = ":memory:", read_only: bool = False) -> None:
-        """`read_only=True` opens an existing store without taking the writer lock (queries only)."""
+    def __init__(self, path: str = ":memory:", read_only: bool = False, embedder: Embedder | None = None) -> None:
+        """`read_only=True` opens an existing store without taking the writer lock (queries only).
+
+        `embedder` turns topic descriptions and questions into vectors for Relate's vector index (default: the
+        dependency-free `HashingEmbedder`). A store remembers which embedder built its vectors.
+        """
+        self._embedder: Embedder = embedder or HashingEmbedder()
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="relate")
         self._conn = self._pool.submit(relate.connect, path, read_only=read_only).result()
 
@@ -117,10 +124,10 @@ class Store:
         )
 
     def add_topic(self, subject: str, predicate: str, description: str) -> None:
-        """Describe a (subject, predicate) key in plain language so `ask()` can find it by search.
+        """Describe a (subject, predicate) key in plain language so `ask()` can find it.
 
-        Relate's full-text index (BM25) is built over these descriptions. Include the words a person
-        would use in a question, including synonyms.
+        Two Relate indexes are built over the description: a full-text index (BM25) and a vector index over its
+        embedding. Include the words a person would use in a question, including synonyms.
         """
         if not description.strip():
             raise ValueError("a topic needs a non-empty description")
@@ -129,6 +136,15 @@ class Store:
             "MERGE (t:Topic {key: $k}) SET t.subject = $s, t.predicate = $p, t.description = $d",
             {"k": f"{subject}.{predicate}", "s": subject, "p": predicate, "d": description},
         )
+        vec = self._embedder.embed(description)
+        if vec is not None:
+            dim = int(self._embedder.dim)
+            self._run("CREATE VECTOR INDEX topic_vec IF NOT EXISTS FOR (t:Topic) ON (t.embedding) OPTIONS "
+                      "{indexConfig: {`vector.dimensions`: " + str(dim) + ", `vector.similarity_function`: 'cosine'}}")
+            self._run("MATCH (t:Topic {key: $k}) SET t.embedding = vector($v, " + str(dim) + ", FLOAT32)",
+                      {"k": f"{subject}.{predicate}", "v": vec})
+            self._run("MERGE (m:Meta {key: 'embedder'}) SET m.name = $n, m.dim = $dim",
+                      {"n": self._embedder.name, "dim": dim})
 
     def derive(self, derived_rev: str, source_rev: str) -> None:
         """Record that `derived_rev` was written from `source_rev`, a revision of ANOTHER document.
@@ -383,39 +399,81 @@ class Store:
         return result
 
     # -- retrieval: find the key from a question, then reason over the graph --
-    _STOP = frozenset(
-        "a an and are as at be but by can do does for from had has have how i if in into is it its may "
-        "many much me my no not of on or our shall should so than that the their then there these they this to "
-        "us was we were what when where which who why will with would you your".split())
+    # Vector scores from Relate are (1 + cosine) / 2, so unrelated text sits near 0.5. The threshold below was chosen
+    # on eval/calibration.yaml (questions that are not in the evaluation set): see eval/calibrate_vector.py.
+    MIN_VECTOR_SCORE = 0.70
+    RRF_K = 60  # reciprocal rank fusion constant
 
-    def ask(self, question: str, k: int = 3, as_of: str | None = None) -> dict[str, Any]:
-        """Answer a plain-language question: retrieval finds the topic, the graph decides the value.
-
-        Relate's full-text search (BM25 over the topic descriptions) picks the best (subject,
-        predicate) keys; the best one is answered with `answer()`, so supersession, authority, ties
-        and dates all apply. The answer also says if the revisions it rests on were written from a
-        source that has since been superseded.
-        """
-        if as_of is not None and self._day(as_of) is None:
-            raise ValueError(f"as_of must be a date like 2025-07-01, got {as_of!r}")
-        terms = [t for t in re.findall(r"[a-z0-9]+", question.lower()) if t not in self._STOP]
-        if not terms:
-            return {"question": question, "status": "no_match", "reason": "the question has no searchable words"}
+    def _fulltext_hits(self, terms: list[str], limit: int) -> list[dict[str, Any]] | None:
+        """Topics ranked by BM25 over their descriptions; None if the store has no full-text index."""
         try:
-            hits = self._run(
-                "MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT " + str(int(k)) + ") "
+            return self._run(
+                "MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT " + str(int(limit)) + ") "
                 "SCORE AS score RETURN t.subject AS subject, t.predicate AS predicate, "
                 "t.description AS description, score ORDER BY score DESC",
                 {"q": " ".join(terms)},
             )
-        except Exception as exc:  # no topic index yet: the store was built without topics
+        except Exception as exc:
             if "index" in str(exc).lower():
-                return {"question": question, "status": "no_topics",
-                        "reason": "this store has no topic descriptions; add them with Store.add_topic()"}
+                return None
             raise
-        if not hits:
+
+    def _vector_hits(self, question: str, limit: int) -> list[dict[str, Any]] | None:
+        """Topics nearest to the question in Relate's vector index; None if unavailable (no index, or the store was
+        built with a different embedder), [] if the question has nothing to embed."""
+        meta = self._run("MATCH (m:Meta {key: 'embedder'}) RETURN m.name AS name")
+        if not meta or meta[0]["name"] != self._embedder.name:
+            return None
+        vec = self._embedder.embed(question)
+        if vec is None:
+            return []
+        try:
+            return self._run(
+                "MATCH (t:Topic) SEARCH t IN (VECTOR INDEX topic_vec FOR $v LIMIT " + str(int(limit)) + ") "
+                "SCORE AS score RETURN t.subject AS subject, t.predicate AS predicate, "
+                "t.description AS description, score ORDER BY score DESC",
+                {"v": vec},
+            )
+        except Exception:
+            return None
+
+    def ask(self, question: str, k: int = 3, as_of: str | None = None, retrieval: str = "hybrid") -> dict[str, Any]:
+        """Answer a plain-language question: retrieval finds the topic, the graph decides the value.
+
+        Retrieval uses two Relate indexes over the topic descriptions: full-text (BM25, exact words) and vector
+        (hashed word and character n-grams, which tolerate plurals, tenses and typos). `retrieval` is "hybrid" (the
+        default: both, fused by reciprocal rank), "fulltext" or "vector". The best topic is answered with `answer()`,
+        so supersession, authority, ties and dates all apply, and the answer says if the revisions it rests on were
+        written from a source that has since been superseded. A store built without vectors falls back to full-text.
+        """
+        if retrieval not in ("hybrid", "fulltext", "vector"):
+            raise ValueError("retrieval must be 'hybrid', 'fulltext' or 'vector'")
+        if as_of is not None and self._day(as_of) is None:
+            raise ValueError(f"as_of must be a date like 2025-07-01, got {as_of!r}")
+        terms = content_words(question)
+        if not terms:
+            return {"question": question, "status": "no_match", "reason": "the question has no searchable words"}
+        ft = self._fulltext_hits(terms, 10) if retrieval in ("hybrid", "fulltext") else []
+        vh = self._vector_hits(question, 10) if retrieval in ("hybrid", "vector") else []
+        if ft is None and not vh:
+            return {"question": question, "status": "no_topics",
+                    "reason": "this store has no topic descriptions; add them with Store.add_topic()"}
+        ranked: dict[str, dict[str, Any]] = {}
+
+        def add(hit: dict[str, Any], rank: int, field: str, value: float) -> None:
+            r = ranked.setdefault(f"{hit['subject']}.{hit['predicate']}", {**hit, "rrf": 0.0, "fulltext_rank": None,
+                                                                          "vector_score": None})
+            r["rrf"] += 1.0 / (self.RRF_K + rank)
+            r[field] = value
+
+        for rank, h in enumerate(ft or [], 1):
+            add(h, rank, "fulltext_rank", rank)
+        for rank, h in enumerate([h for h in (vh or []) if h["score"] >= self.MIN_VECTOR_SCORE], 1):
+            add(h, rank, "vector_score", round(h["score"], 3))
+        if not ranked:
             return {"question": question, "status": "no_match", "reason": "no topic matches the question"}
-        best = hits[0]
+        order = sorted(ranked.values(), key=lambda r: -r["rrf"])
+        best = order[0]
         ans = self.answer(best["subject"], best["predicate"], as_of)
         sources = set(ans.get("sources", [])) | ({ans["source"]} if "source" in ans else set()) \
             | {c["rev"] for c in ans.get("candidates", [])}
@@ -424,10 +482,12 @@ class Store:
             "question": question,
             "status": ans["status"],
             "matched": {"subject": best["subject"], "predicate": best["predicate"],
-                        "description": best["description"], "score": round(best["score"], 3)},
+                        "description": best["description"], "score": round(best["rrf"], 4),
+                        "via": {"mode": retrieval, "fulltext_rank": best["fulltext_rank"],
+                                "vector_score": best["vector_score"]}},
             "answer": ans,
-            "alternatives": [{"subject": h["subject"], "predicate": h["predicate"], "score": round(h["score"], 3)}
-                             for h in hits[1:]],
+            "alternatives": [{"subject": h["subject"], "predicate": h["predicate"], "score": round(h["rrf"], 4)}
+                             for h in order[1:k]],
         }
         if stale:
             out["stale_sources"] = stale

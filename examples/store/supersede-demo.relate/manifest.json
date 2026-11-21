@@ -1,28 +1,28 @@
 {
   "format_version": 5,
-  "next_node_id": 108,
+  "next_node_id": 109,
   "next_rel_id": 87,
-  "checkpoint_lsn": 123,
-  "commit_ts": 141,
+  "checkpoint_lsn": 162,
+  "commit_ts": 198,
   "node_parts": [
     {
-      "path": "nodes/0-262144-b1007eba38f54e4d67022d53528b0f30.parquet",
+      "path": "nodes/0-262144-3cd5188514e56846e0d5c0e147c62b0d.parquet",
       "id_lo": 0,
       "id_hi": 262144,
-      "rows": 108,
-      "bytes": 6090
+      "rows": 109,
+      "bytes": 15976
     }
   ],
   "rel_parts": [
     {
-      "path": "relationships/0-262144-171f4dca1c312049838bad425aca98ee.parquet",
+      "path": "relationships/0-262144-a7db876816a9c0c153338e4d5ae77182.parquet",
       "id_lo": 0,
       "id_hi": 262144,
       "rows": 87,
       "bytes": 2376
     }
   ],
-  "bytes_per_node": 56.38888888888888,
+  "bytes_per_node": 146.56880733944953,
   "bytes_per_rel": 27.310344827586206,
   "codec": "parquet",
   "indexes": [
@@ -30,6 +30,11 @@
       "name": "topic_text",
       "label": "Topic",
       "property": "description#FULLTEXT#topic_text"
+    },
+    {
+      "name": "topic_vec",
+      "label": "Topic",
+      "property": "embedding#VECTOR#topic_vec"
     }
   ],
   "constraints": [],
@@ -59,6 +64,17 @@
           "description"
         ],
         "with_properties": []
+      },
+      "topic_vec": {
+        "kind": "Vector",
+        "relationship": false,
+        "labels": [
+          "Topic"
+        ],
+        "properties": [
+          "embedding"
+        ],
+        "with_properties": []
       }
     },
     "index_options": {
@@ -73,6 +89,37 @@
             "fulltext.eventually_consistent": {
               "t": "bool",
               "v": false
+            }
+          }
+        }
+      },
+      "topic_vec": {
+        "indexConfig": {
+          "t": "map",
+          "v": {
+            "vector.default_search_expansion_factor": {
+              "t": "float",
+              "v": 3.0
+            },
+            "vector.dimensions": {
+              "t": "int",
+              "v": 256
+            },
+            "vector.hnsw.ef_construction": {
+              "t": "int",
+              "v": 100
+            },
+            "vector.hnsw.m": {
+              "t": "int",
+              "v": 16
+            },
+            "vector.quantization.type": {
+              "t": "string",
+              "v": "BINARY"
+            },
+            "vector.similarity_function": {
+              "t": "string",
+              "v": "COSINE"
             }
           }
         }

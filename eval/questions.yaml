@@ -91,3 +91,25 @@ as_of:
   - {id: t11, subject: fastening, predicate: head_bolt_torque, date: "2025-08-01", expected_status: unknown, expected_warnings: [dated_before_predecessor, future_date]}
   - {id: t12, subject: furnace_loading, predicate: preheat_minutes, date: "2025-01-01", expected_status: agreed, expected_value: "20", expected_source: WI-31-r1, expected_warnings: [missing_date]}
   - {id: t13, subject: furnace_loading, predicate: preheat_minutes, date: "2026-06-01", expected_status: agreed, expected_value: "20", expected_source: WI-31-r1, expected_warnings: [missing_date]}
+
+# Wording variants for ask(): plurals, tenses, typos and word order that exact full-text matching misses.
+# Written BEFORE any retrieval mode was run on them. Designed to be harder for exact matching; the last three are off-topic.
+retrieval_variants:
+  - {id: v01, question: "How often do we calibrate a gauge?", expected_key: gauge_calibration.interval, expected_status: agreed, expected_value: "6 months"}
+  - {id: v02, question: "What torques apply to the cylinder head bolt?", expected_key: fastening.head_bolt_torque, expected_status: agreed, expected_value: "48 Nm"}
+  - {id: v03, question: "How long are retention samples stored?", expected_key: retained_sample.retention_period, expected_status: resolved, expected_value: "10 years"}
+  - {id: v04, question: "Hw long must retaned samples be kept?", expected_key: retained_sample.retention_period, expected_status: resolved, expected_value: "10 years"}
+  - {id: v05, question: "Whats the preheating time of the furnace before loading it?", expected_key: furnace_loading.preheat_minutes, expected_status: agreed, expected_value: "30"}
+  - {id: v06, question: "How thick should paint films be on the painting line?", expected_key: paint_line.film_thickness_um, expected_status: resolved, expected_value: "70-90"}
+  - {id: v07, question: "At which pressure are leaks tested?", expected_key: leak_test.pressure_bar, expected_status: agreed, expected_value: "2.5"}
+  - {id: v08, question: "Are failed parts allowed to be retested after a leak test?", expected_key: leak_test.retest_allowed, expected_status: unknown}
+  - {id: v09, question: "How many days notice do suppliers get before audits on site?", expected_key: supplier_audit.on_site_notice_days, expected_status: agreed, expected_value: "7"}
+  - {id: v10, question: "What time limit applies for notifying customers of nonconformances?", expected_key: customer_notification.hours, expected_status: agreed, expected_value: "24"}
+  - {id: v11, question: "Tool changes in the machining cell: how many parts between them?", expected_key: machining_cell.tool_change_interval, expected_status: unresolved}
+  - {id: v12, question: "Which form is used for recording inspection results?", expected_key: final_inspection.record_form, expected_status: agreed, expected_value: "FORM-9"}
+  - {id: v13, question: "How long must inspection records be retained?", expected_key: final_inspection.record_retention, expected_status: agreed, expected_value: "5 years"}
+  - {id: v14, question: "What changeovers target time applies to line three?", expected_key: line_3.changeover_target_min, expected_status: unresolved}
+  - {id: v15, question: "What is the cover bolts tightening torque?", expected_key: fastening.cover_bolt_torque, expected_status: agreed, expected_value: "24 Nm"}
+  - {id: v16, question: "Who manages the canteen contract?", expected_key: null, expected_status: no_match}
+  - {id: v17, question: "What is the guest Wi-Fi called?", expected_key: null, expected_status: no_match}
+  - {id: v18, question: "Which parking spots are reserved for visitors?", expected_key: null, expected_status: no_match}

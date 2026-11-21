@@ -32,7 +32,7 @@ Supersede:                          10 years   from the customer requirement CSR
   history, never a conflict.
 * **Authority resolves conflicts** (customer requirement > controlled procedure > work instruction > shift note).
   Equal authority is reported as `unresolved`, never guessed.
-* **Plain-language questions:** Relate's full-text index finds the topic, then the graph decides the value.
+* **Plain-language questions:** hybrid retrieval (Relate's full-text and vector indexes) finds the topic, then the graph decides the value.
 * **Time:** what was in force on a past date. Missing, mistyped or out-of-order dates are reported, never guessed.
   A web page draws every revision on a timeline and a **date slider** shows the winning value change as you drag it
   (pictures of it are in the README).
@@ -52,7 +52,7 @@ project, so memory-only mode would defeat it.
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
 (Rev)-[:SUPERSEDES]->(Rev)        // within a document: newer replaces older
 (Rev)-[:DERIVED_FROM]->(Rev)      // across documents: written from that revision
-(Topic {subject, predicate, description})   // searched by Relate's full-text index
+(Topic {subject, predicate, description, embedding})   // searched by Relate's full-text and vector indexes
 ```
 
 Each behaviour is a short Cypher query, for example the contradiction join that only looks at current revisions,
@@ -64,14 +64,17 @@ MATCH (db:Doc)-[:HAS_REV]->(rb:Rev)-[:ASSERTS]->(b:Fact)
 WHERE a.subject = b.subject AND a.predicate = b.predicate AND a.value <> b.value AND a.fid < b.fid
   AND NOT (:Rev)-[:SUPERSEDES]->(ra) AND NOT (:Rev)-[:SUPERSEDES]->(rb)
 
-MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT 3) SCORE AS score
+MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT 10) SCORE AS score
+MATCH (t:Topic) SEARCH t IN (VECTOR INDEX topic_vec FOR $v LIMIT 10) SCORE AS score
 ```
 
 **Relate capabilities used:** the embedded Python DB-API (`$name` parameters, commit, close); a persistent directory
 store, also opened read-only; `MERGE`; `NOT (...)` pattern predicates; unbounded variable-length paths
 (`[:SUPERSEDES*1..]`, `[:DERIVED_FROM*1..]`, `*0..` for cycle checks); multi-`MATCH` joins; a **full-text index**
-(`CREATE FULLTEXT INDEX`, `SEARCH ... SCORE AS`) that persists in the store and works on a read-only open.
-**Not used:** vector search (it needs embeddings you supply; Relate does not compute them), Relate's own MCP
+and a **vector index** (`CREATE FULLTEXT INDEX`, `CREATE VECTOR INDEX`, `SEARCH ... SCORE AS`) that persist in the
+store and work on a read-only open, fused by reciprocal rank in Python (Relate's `COMBINE` is preview). Relate does
+not compute embeddings; Supersede uses a small dependency-free hashing embedder (word forms and typos, not true
+synonyms). **Not used:** Relate's own MCP
 server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools instead.
 
 ## How I built it
@@ -81,7 +84,7 @@ Relate connections are thread-affine but an MCP server calls tools from worker t
 work on one dedicated thread. Writes are strict: unknown ids, a reused fact id, a non-integer authority or a cycle
 raise instead of silently doing nothing. Documents load from annotated Markdown, and an optional extraction tool
 proposes facts from plain prose, with guard rails (a fixed vocabulary, a verbatim quote that must appear in the
-text, rejections listed and never written, and a human-review copy). The suite has 160 tests, and CI runs on
+text, rejections listed and never written, and a human-review copy). The suite has 168 tests, and CI runs on
 Linux, macOS and Windows with Python 3.10 to 3.13.
 
 ## Does it work? The numbers, and how to read them
@@ -129,8 +132,8 @@ longer in force. Everything, with the blind runs, is in `docs/EVIDENCE.md`.
 ## What's next
 
 Value normalisation (`2 years` = `two years`); extracting revision links from the text itself, not only facts;
-company-internal documents in place of public regulations; per-subject authority rules; and vector or hybrid
-retrieval once embeddings are acceptable as a dependency.
+company-internal documents in place of public regulations; per-subject authority rules; and a trained embedding model
+behind the existing embedder interface for true synonyms.
 
 ## Try it
 
