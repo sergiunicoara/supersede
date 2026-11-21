@@ -9,3 +9,6 @@ build/
 *.relate
 # local screen capture for the demo video (large binary, not part of the repo)
 demo_terminal_capture.mp4
+# ...except the committed, inspectable demo store (fictional data; see examples/store/README.md)
+!examples/store/supersede-demo.relate
+!examples/store/supersede-demo.relate/.relate
