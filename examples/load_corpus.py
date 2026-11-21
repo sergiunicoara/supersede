@@ -49,6 +49,10 @@ def load_docs(store: Store, docs: list[dict]) -> None:
         for r in d["revisions"]:
             if "supersedes" in r:
                 store.supersede(f"{d['id']}-r{r['rev']}", f"{d['id']}-r{r['supersedes']}")
+    for d in docs:  # cross-document links, after every revision exists
+        for r in d["revisions"]:
+            for source in r.get("derived_from", []):
+                store.derive(f"{d['id']}-r{r['rev']}", source)
     store.commit()
 
 

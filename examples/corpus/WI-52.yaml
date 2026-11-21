@@ -1,0 +1,11 @@
+# FICTIONAL. Operator card written from WI-12, which was itself written from an old QP-07 revision.
+id: WI-52
+title: Final inspection operator card
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2025-07-01"
+    derived_from: [WI-12-r1]
+    facts:
+      - {id: F-WI52-1-1, subject: final_inspection, predicate: record_form, value: "FORM-9"}

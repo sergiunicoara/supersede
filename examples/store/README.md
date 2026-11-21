@@ -1,8 +1,8 @@
 # Inspectable demo store
 
 `supersede-demo.relate/` is a persistent Relate store in **directory mode**, built from the
-fictional corpus in [`../corpus/`](../corpus/) (15 documents, 25 revisions, 46 facts; 86 nodes and
-81 relationships). All data is invented.
+fictional corpus in [`../corpus/`](../corpus/) (16 documents, 26 revisions, 47 facts; 89 nodes and
+87 relationships). All data is invented.
 
 Open it without changing it:
 

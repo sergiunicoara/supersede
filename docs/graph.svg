@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 400" width="820" height="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+  <title>Supersede graph model</title>
+  <desc>Documents have revisions; revisions assert facts; a newer revision supersedes an older one within a document; a revision can be derived from a revision of another document.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
+    <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c2410c"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#b91c1c"/></marker>
+  </defs>
+  <rect width="820" height="400" fill="#ffffff"/>
+  <text x="20" y="24" font-size="15" font-weight="600" fill="#0f172a">Supersede graph model (fictional example)</text>
+
+  <!-- documents -->
+  <rect x="20" y="62" width="150" height="54" rx="8" fill="#e0f2fe" stroke="#0369a1"/>
+  <text x="95" y="84" text-anchor="middle" font-weight="600" fill="#0c4a6e">Doc QP-07</text>
+  <text x="95" y="102" text-anchor="middle" fill="#0c4a6e">authority 3 (procedure)</text>
+  <rect x="20" y="292" width="150" height="54" rx="8" fill="#e0f2fe" stroke="#0369a1"/>
+  <text x="95" y="314" text-anchor="middle" font-weight="600" fill="#0c4a6e">Doc WI-12</text>
+  <text x="95" y="332" text-anchor="middle" fill="#0c4a6e">authority 2 (work instr.)</text>
+
+  <!-- revisions -->
+  <rect x="270" y="46" width="150" height="46" rx="8" fill="#dcfce7" stroke="#15803d"/>
+  <text x="345" y="66" text-anchor="middle" font-weight="600" fill="#14532d">Rev QP-07-r3</text>
+  <text x="345" y="82" text-anchor="middle" fill="#14532d">current</text>
+  <rect x="270" y="170" width="150" height="46" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="345" y="190" text-anchor="middle" font-weight="600" fill="#475569">Rev QP-07-r1</text>
+  <text x="345" y="206" text-anchor="middle" fill="#475569">superseded (history)</text>
+  <rect x="270" y="296" width="150" height="46" rx="8" fill="#dcfce7" stroke="#15803d"/>
+  <text x="345" y="316" text-anchor="middle" font-weight="600" fill="#14532d">Rev WI-12-r1</text>
+  <text x="345" y="332" text-anchor="middle" fill="#14532d">current</text>
+
+  <!-- facts -->
+  <rect x="540" y="46" width="200" height="46" rx="8" fill="#fef9c3" stroke="#a16207"/>
+  <text x="640" y="66" text-anchor="middle" fill="#713f12">Fact sampling</text>
+  <text x="640" y="82" text-anchor="middle" font-weight="600" fill="#713f12">= AQL 0.65</text>
+  <rect x="540" y="170" width="200" height="46" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="640" y="190" text-anchor="middle" fill="#475569">Fact sampling</text>
+  <text x="640" y="206" text-anchor="middle" font-weight="600" fill="#475569">= 100% inspection</text>
+  <rect x="540" y="296" width="200" height="46" rx="8" fill="#fef9c3" stroke="#a16207"/>
+  <text x="640" y="316" text-anchor="middle" fill="#713f12">Fact sampling</text>
+  <text x="640" y="332" text-anchor="middle" font-weight="600" fill="#713f12">= 100% inspection</text>
+
+  <!-- HAS_REV -->
+  <line x1="170" y1="80" x2="268" y2="70" stroke="#334155" marker-end="url(#a)"/>
+  <line x1="170" y1="100" x2="268" y2="190" stroke="#334155" marker-end="url(#a)"/>
+  <line x1="170" y1="319" x2="268" y2="319" stroke="#334155" marker-end="url(#a)"/>
+  <text x="188" y="64" fill="#334155" font-size="11">HAS_REV</text>
+  <text x="188" y="311" fill="#334155" font-size="11">HAS_REV</text>
+
+  <!-- ASSERTS -->
+  <line x1="420" y1="69" x2="538" y2="69" stroke="#334155" marker-end="url(#a)"/>
+  <line x1="420" y1="193" x2="538" y2="193" stroke="#334155" marker-end="url(#a)"/>
+  <line x1="420" y1="319" x2="538" y2="319" stroke="#334155" marker-end="url(#a)"/>
+  <text x="452" y="62" fill="#334155" font-size="11">ASSERTS</text>
+
+  <!-- SUPERSEDES (within a document) -->
+  <line x1="345" y1="92" x2="345" y2="168" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+  <text x="353" y="134" fill="#0f172a" font-size="12" font-weight="600">SUPERSEDES</text>
+  <text x="353" y="149" fill="#475569" font-size="11">(same document; r3 replaced r2, then r1)</text>
+
+  <!-- DERIVED_FROM (across documents) -->
+  <path d="M 300 296 L 300 220" stroke="#c2410c" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#o)"/>
+  <text x="290" y="256" text-anchor="end" fill="#c2410c" font-size="12" font-weight="600">DERIVED_FROM</text>
+  <text x="290" y="271" text-anchor="end" fill="#9a3412" font-size="11">(other document:</text>
+  <text x="290" y="285" text-anchor="end" fill="#9a3412" font-size="11">copied the old rule)</text>
+  <text x="312" y="256" fill="#9a3412" font-size="11">stale_derivations flags WI-12-r1</text>
+
+  <!-- contradiction between two current facts -->
+  <path d="M 744 69 L 780 69 L 780 319 L 744 319" stroke="#b91c1c" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#r)" marker-start="url(#r)"/>
+  <text x="680" y="250" fill="#b91c1c" font-size="12" font-weight="600" text-anchor="middle">contradiction: two CURRENT</text>
+  <text x="680" y="266" fill="#b91c1c" font-size="12" text-anchor="middle">facts disagree; authority 3 &gt; 2,</text>
+  <text x="680" y="282" fill="#b91c1c" font-size="12" text-anchor="middle">so AQL 0.65 wins</text>
+
+  <text x="20" y="384" fill="#475569" font-size="12">Current = not superseded. A fact in a superseded revision is history, never a conflict. Equal authority is reported as unresolved.</text>
+</svg>

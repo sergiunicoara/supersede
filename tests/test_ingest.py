@@ -37,6 +37,14 @@ def test_parse_rejects_bad_documents(text, message):
         parse(text, "bad.md")
 
 
+def test_derived_from_header_is_parsed_and_validated(tmp_path):
+    r = parse(HEADER.replace("revision: 1", "revision: 1\nderived_from: X-r1, Y-r2") + "{{k.p = v}}")
+    assert r.derived_from == ("X-r1", "Y-r2")
+    (tmp_path / "a.md").write_text(HEADER.replace("revision: 1", "revision: 1\nderived_from: NOPE-r1"), encoding="utf-8")
+    with pytest.raises(ValueError, match="derived_from"):
+        ingest_directory(Store(), tmp_path)
+
+
 def test_unannotated_prose_yields_no_facts():
     assert parse(HEADER + "Pack 24 to a box. The label language is English.").facts == ()
 
@@ -51,6 +59,9 @@ def test_example_documents_ingest_and_answer_like_the_corpus_semantics():
     assert s.answer("packaging", "label_language")["status"] == "agreed"
     assert s.history("QP-40-r2") == ["QP-40-r1"]
     assert [(c.subject, c.predicate) for c in s.contradictions()] == [("packaging", "units_per_box")]
+    # WI-41 r1 was written from QP-40 r1, which QP-40 r2 replaced
+    assert s.stale_derivations() == [
+        {"revision": "WI-41-r1", "source": "QP-40-r1", "hops": 1, "replaced_by": ["QP-40-r2"]}]
 
 
 def test_inconsistent_authority_for_one_document_is_refused(tmp_path):

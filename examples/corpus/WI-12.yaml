@@ -6,5 +6,6 @@ authority: 2
 revisions:
   - rev: 1
     effective: "2025-06-01"
+    derived_from: [QP-07-r1]   # copied the old 100% inspection rule
     facts:
       - {id: F-WI12-1-1, subject: final_inspection, predicate: sampling, value: "100% inspection"}

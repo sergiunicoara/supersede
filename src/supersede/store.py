@@ -114,6 +114,32 @@ class Store:
             {"n": newer_rev, "o": older_rev},
         )
 
+    def derive(self, derived_rev: str, source_rev: str) -> None:
+        """Record that `derived_rev` was written from `source_rev`, a revision of ANOTHER document.
+
+        Within one document, use supersede() instead. DERIVED_FROM links must not form a cycle.
+        """
+        for rid in (derived_rev, source_rev):
+            if not self._exists("Rev", "id", rid):
+                raise ValueError(f"unknown revision {rid!r}: call add_revision first")
+        docs = self._run(
+            "MATCH (a:Rev {id: $a}), (b:Rev {id: $b}) RETURN a.doc AS da, b.doc AS db",
+            {"a": derived_rev, "b": source_rev},
+        )[0]
+        if docs["da"] == docs["db"]:
+            raise ValueError(f"{derived_rev!r} and {source_rev!r} are revisions of the same document; "
+                             f"use supersede() for that")
+        cyc = self._run(
+            "MATCH (:Rev {id: $s})-[:DERIVED_FROM*0..]->(n:Rev {id: $d}) RETURN count(n) AS n",
+            {"d": derived_rev, "s": source_rev},
+        )
+        if cyc[0]["n"] > 0:
+            raise ValueError(f"{derived_rev!r} derived from {source_rev!r} would create a cycle")
+        self._run(
+            "MATCH (a:Rev {id: $a}), (b:Rev {id: $b}) MERGE (a)-[:DERIVED_FROM]->(b)",
+            {"a": derived_rev, "b": source_rev},
+        )
+
     def assert_fact(self, rev_id: str, fact_id: str, subject: str, predicate: str, value: str) -> None:
         if not self._exists("Rev", "id", rev_id):
             raise ValueError(f"unknown revision {rev_id!r}: call add_revision first")
@@ -145,6 +171,41 @@ class Store:
             {"id": rev_id},
         )
         return [r["id"] for r in rows]
+
+    def _replacements(self, rev_id: str) -> list[str]:
+        """The current revision(s) at the end of the SUPERSEDES chain that replaced `rev_id`."""
+        rows = self._run(
+            "MATCH (c:Rev)-[:SUPERSEDES*1..]->(:Rev {id: $id}) WHERE NOT (:Rev)-[:SUPERSEDES]->(c) "
+            "RETURN DISTINCT c.id AS id ORDER BY id",
+            {"id": rev_id},
+        )
+        return [r["id"] for r in rows]
+
+    def lineage(self, rev_id: str) -> list[dict[str, Any]]:
+        """Revisions that `rev_id` was derived from, directly or through a chain, nearest first.
+
+        Each entry says whether that source is still current and, if not, what replaced it.
+        """
+        rows = self._run(
+            "MATCH p=(:Rev {id: $id})-[:DERIVED_FROM*1..]->(s:Rev) "
+            "RETURN s.id AS id, length(p) AS hops ORDER BY hops, id",
+            {"id": rev_id},
+        )
+        current = set(self.current_revisions())
+        return [
+            {"source": r["id"], "hops": r["hops"], "current": r["id"] in current,
+             "replaced_by": [] if r["id"] in current else self._replacements(r["id"])}
+            for r in rows
+        ]
+
+    def stale_derivations(self) -> list[dict[str, Any]]:
+        """Current revisions that rest, directly or through a chain, on a source that was superseded."""
+        rows = self._run(
+            "MATCH p=(r:Rev)-[:DERIVED_FROM*1..]->(s:Rev) "
+            "WHERE NOT (:Rev)-[:SUPERSEDES]->(r) AND (:Rev)-[:SUPERSEDES]->(s) "
+            "RETURN r.id AS revision, s.id AS source, length(p) AS hops ORDER BY revision, hops, source"
+        )
+        return [{**r, "replaced_by": self._replacements(r["source"])} for r in rows]
 
     def current_facts(self, subject: str, predicate: str) -> list[dict[str, Any]]:
         return self._run(
