@@ -1,12 +1,24 @@
 {
+  "CFR21-803-18_r1.md": {
+    "mdr_event_file.minimum_retention": "2 years",
+    "mdr_evaluation.part_820_reference": "quality system requirements"
+  },
+  "CFR21-803-18_r2.md": {
+    "mdr_event_file.minimum_retention": "2 years",
+    "mdr_evaluation.part_820_reference": "quality management system requirements"
+  },
   "CFR21-820-complaints_r1.md": {
     "complaint_record.investigation_content": "dates and results of the investigation"
   },
-  "CFR21-820-complaints_r2.md": {},
+  "CFR21-820-complaints_r2.md": {
+    "complaint_handling.requirement_source": "Clause 8.2.2 in ISO 13485"
+  },
   "CFR21-820-records_r1.md": {
     "device_records.minimum_retention": "2 years"
   },
-  "CFR21-820-records_r2.md": {},
+  "CFR21-820-records_r2.md": {
+    "complaint_handling.requirement_source": "Clause 8.2.2 in ISO 13485"
+  },
   "CFR21-820-scope_r1.md": {
     "regulation_name.scope_title": "quality system regulation"
   },
@@ -42,5 +54,10 @@
     "ethics_clause.value_threshold": "$7.5 million",
     "hotline_poster.value_threshold": "$7.5 million",
     "ethics_clause.performance_period": "120 days"
+  },
+  "FDA-MDR-guidance_r1.md": {
+    "complaint_handling.requirement_source": "21 CFR 820.198",
+    "mdr_event_file.minimum_retention": "two years",
+    "mdr_evaluation.part_820_reference": "complaint file requirements"
   }
 }

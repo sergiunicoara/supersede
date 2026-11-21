@@ -230,7 +230,7 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 137 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+* The suite has 143 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
   chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
   a store byte-identical, and one that runs the demo end to end over MCP.
 
@@ -336,6 +336,32 @@ requirement that leaves the text. Limits: 13 documents in 5 chains, an author-ch
 2026 section 820.35 as the successor of 820.180 and 820.198 is an interpretation (the text overlaps word for
 word, but it is not an official mapping); and the earliest date of each section is the start of the eCFR's
 history window, not the original effective date.
+
+### A real authority hierarchy: a regulation over the FDA guidance written from it
+
+The fictional corpus uses a four-tier authority scheme from internal company documents, which I cannot publish
+real examples of. A real, public hierarchy exists in the same domain: a regulation outranks non-binding FDA
+guidance. FDA's 2016 guidance *Medical Device Reporting for Manufacturers* (a US government work, public domain;
+excerpted in `examples/real/`, passages copied verbatim from the PDF and checked by me) still cites 21 CFR 820.198
+eleven times, a section removed in 2026, although a note added to its first page says complaint handling now sits in
+ISO 13485 clause 8.2.2, so it contradicts itself. Supersede, tested offline on the gold facts:
+
+* today answers with the regulation (`Clause 8.2.2 in ISO 13485`, authority 4) and lists the guidance's `21 CFR
+  820.198` (authority 2) as overruled;
+* for a date before the rule changed (for example 2020-01-01) the guidance is the only statement in force;
+* flags the guidance as written from revisions of 820.198 and 803.18 that were since replaced;
+* shows a known limit on real data: the regulation's "2 years" and the guidance's "two years" mean the same but are
+  compared as strings, so it is settled by authority (correctly) instead of recognised as agreement.
+
+Live extraction on the 16 documents (29 gold facts). First, blind run on the new keys: 24 of 27 right (precision 0.86,
+recall 0.89); two of the misses were errors in my gold (identical 820.35 text had different gold in two documents,
+and I had missed a statement the key description asks for), and one value was overlong and **rejected by the guard
+rails**. After I corrected those two gold facts and clarified the wording (informed by that run), three runs got 27 of
+29, with no wrong fact: the two remaining misses are string boundaries (`21 CFR 820.198(a)` against `21 CFR 820.198`,
+and "The dates and results..." with its article, which had been right in earlier runs). I stopped there instead of
+adjusting until it said 29 of 29. A statute > regulation > guidance order is a real hierarchy, but it is **not** a
+plant's own tiers (customer requirement > procedure > work instruction > shift note): it shows the authority mechanism
+working on a real hierarchy someone else defined, not that my four tiers match how a factory ranks its documents.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always

@@ -23,11 +23,12 @@ def real_store():
 
 
 def test_the_real_folder_is_complete_and_attributed():
-    assert len(FILES) == 13 and set(GOLD) == {p.name for p in FILES}
+    assert len(FILES) == 16 and set(GOLD) == {p.name for p in FILES}
     for p in FILES:
         text = p.read_text(encoding="utf-8")
-        assert "https://www.ecfr.gov" in text and "public domain" in text  # provenance on every file
-        assert parse(text, p.name).authority == 4
+        assert ("https://www.ecfr.gov" in text or "https://www.fda.gov" in text) and "public domain" in text  # provenance
+        # federal regulations are authority 4; the one FDA guidance document (non-binding) is 2
+        assert parse(text, p.name).authority == (2 if p.name.startswith("FDA-") else 4)
 
 
 def test_gold_values_are_verbatim_in_the_real_text():
@@ -43,8 +44,8 @@ def test_real_effective_dates_are_clean_and_the_chain_is_in_order():
     assert s.date_warnings() == []
     assert s.history("FAR-13.000-r3") == ["FAR-13.000-r2", "FAR-13.000-r1"]
     assert s.history("CFR21-820-scope-r3") == ["CFR21-820-scope-r2", "CFR21-820-scope-r1"]
-    assert s.current_revisions() == ["CFR21-820-complaints-r2", "CFR21-820-records-r2", "CFR21-820-scope-r3",
-                                     "FAR-13.000-r3", "FAR-3.1004-r3"]
+    assert s.current_revisions() == ["CFR21-803-18-r2", "CFR21-820-complaints-r2", "CFR21-820-records-r2",
+                                     "CFR21-820-scope-r3", "FAR-13.000-r3", "FAR-3.1004-r3", "FDA-MDR-guidance-r1"]
 
 
 @pytest.mark.parametrize("subject, predicate, day, status, value, source", [
@@ -99,3 +100,42 @@ def test_a_requirement_that_leaves_the_text_is_unknown_not_carried_forward():
     """The 2026 text points to ISO 13485 (copyrighted, not in the CFR text), so the CFR no longer states the period."""
     a = real_store().answer("device_records", "minimum_retention")
     assert a == {"status": "unknown", "reason": "no current fact asserted"}
+
+
+# -- a real authority hierarchy: regulation (4) over non-binding FDA guidance (2) ------------------------------
+def test_the_guidance_is_flagged_as_written_from_text_that_was_replaced():
+    stale = real_store().stale_derivations()
+    assert [(x["revision"], x["source"], x["replaced_by"]) for x in stale] == [
+        ("FDA-MDR-guidance-r1", "CFR21-803-18-r1", ["CFR21-803-18-r2"]),
+        ("FDA-MDR-guidance-r1", "CFR21-820-complaints-r1", ["CFR21-820-complaints-r2"]),
+    ]
+
+
+def test_today_the_regulation_overrules_the_stale_guidance():
+    a = real_store().answer("complaint_handling", "requirement_source")
+    assert (a["status"], a["value"], a["source"]) == ("resolved", "Clause 8.2.2 in ISO 13485", "CFR21-820-complaints-r2")
+    assert [(o["value"], o["rev"]) for o in a["overruled"]] == [("21 CFR 820.198", "FDA-MDR-guidance-r1")]
+    assert "authority 4" in a["reason"]
+
+
+def test_before_the_rule_changed_the_guidance_was_the_only_statement_in_force():
+    s = real_store()
+    for day in ("2016-11-08", "2020-01-01", "2026-02-03"):
+        a = s.answer("complaint_handling", "requirement_source", as_of=day)
+        assert (a["status"], a["value"], a["sources"]) == ("agreed", "21 CFR 820.198", ["FDA-MDR-guidance-r1"]), day
+    assert s.answer("complaint_handling", "requirement_source", as_of="2016-11-07")["status"] == "unknown"
+
+
+@pytest.mark.parametrize("day, value", [(None, "quality management system requirements"), ("2020-01-01", "quality system requirements")])
+def test_the_regulation_wording_wins_over_the_guidance_at_each_date(day, value):
+    a = real_store().answer("mdr_evaluation", "part_820_reference", as_of=day)
+    assert (a["status"], a["value"]) == ("resolved", value)
+    assert [o["value"] for o in a["overruled"]] == ["complaint file requirements"]
+
+
+def test_same_requirement_in_different_words_is_resolved_not_agreed_a_known_limit():
+    """The regulation says '2 years' and the guidance 'two years'. Values are compared as strings, so this is a
+    contradiction settled by authority (the right answer), not agreement: value normalisation is future work."""
+    a = real_store().answer("mdr_event_file", "minimum_retention")
+    assert (a["status"], a["value"]) == ("resolved", "2 years")
+    assert [o["value"] for o in a["overruled"]] == ["two years"]

@@ -101,7 +101,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 137 tests (136 without an API key: one live test is skipped)
+python -m pytest -q                          # 143 tests (142 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -218,7 +218,7 @@ rejected nothing. This is a small, author-written set, so treat it as evidence t
 works, not as a benchmark.
 
 It also works on **real text**: [examples/real](examples/real/) holds 13 documents from the public eCFR
-(US federal regulations, public domain), including a **quality-manufacturing** history: FDA's device
+(US federal regulations and one FDA guidance document, public domain), including a **quality-manufacturing** history: FDA's device
 quality regulation, 21 CFR Part 820, in its 2016 Quality System Regulation and 2026 Quality Management
 System Regulation forms. A record-retention requirement ("no less than 2 years") that the 2016 text states
 is no longer stated in the 2026 text (it moved to ISO 13485, which is not in the CFR), so Supersede answers
@@ -233,8 +233,18 @@ two no-fact documents. The 3 misses were my own wording problems (the model copi
 the investigation" with its capital "The", and read "quality system" for the name). After I clarified the
 vocabulary (informed by that run), three runs got 20 of 20, and the graph built from the extracted facts gave
 the same answer as the gold graph for all 48 (key, date) pairs. The FAR sections had the same pattern in an
-earlier run (13 of 15, then 15 of 15 three times). This is a small, author-chosen sample of 13 documents,
-not a benchmark.
+earlier run (13 of 15, then 15 of 15 three times). This is a small, author-chosen sample, not a benchmark.
+
+The folder also has a **real authority hierarchy**: FDA's non-binding guidance *Medical Device Reporting for
+Manufacturers* (2016, excerpted) against the regulation it explains. The guidance still cites 21 CFR 820.198, a
+section removed in 2026, so Supersede answers with the regulation, lists the guidance as overruled, answers the
+guidance's statement for dates before the change, and flags the guidance as written from replaced text. On the 16
+documents (29 gold facts) the first, blind run on the new keys got 24 of 27 right (two of my gold facts were
+wrong or missing and one value was overlong and rejected by the guard rails); after I corrected those two gold
+facts and clarified the wording (informed), three runs got 27 of 29, the two remaining misses being string
+boundaries (`21 CFR 820.198(a)` against `21 CFR 820.198`, "The dates..." with its article), with no wrong fact.
+A statute > regulation > guidance order is a real hierarchy, but it is not a plant's own tiers; see
+[examples/real](examples/real/).
 
 ## Where the data lives
 
