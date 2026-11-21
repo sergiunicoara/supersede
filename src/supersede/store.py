@@ -70,7 +70,16 @@ class Store:
         self._pool.shutdown(wait=True)
 
     # -- writes -----------------------------------------------------------
+    # Writes are strict: a reference to something that does not exist, a reused fact id, a
+    # non-integer authority or a cycle in SUPERSEDES raises ValueError instead of silently
+    # doing nothing or overwriting another revision's data.
+    def _exists(self, label: str, key: str, value: str) -> bool:
+        rows = self._run(f"MATCH (n:{label} {{{key}: $v}}) RETURN count(n) AS n", {"v": value})
+        return rows[0]["n"] > 0
+
     def add_document(self, doc_id: str, title: str, authority: int) -> None:
+        if isinstance(authority, bool) or not isinstance(authority, int):
+            raise ValueError(f"authority of document {doc_id!r} must be an integer, got {authority!r}")
         self._run(
             "MERGE (d:Doc {id: $id}) SET d.title = $title, d.authority = $authority",
             {"id": doc_id, "title": title, "authority": authority},
@@ -78,6 +87,8 @@ class Store:
 
     def add_revision(self, doc_id: str, rev: int, effective: str) -> str:
         rev_id = f"{doc_id}-r{rev}"
+        if not self._exists("Doc", "id", doc_id):
+            raise ValueError(f"unknown document {doc_id!r}: call add_document first")
         self._run(
             "MATCH (d:Doc {id: $doc}) "
             "MERGE (r:Rev {id: $rid}) SET r.doc = $doc, r.rev = $rev, r.effective = $eff "
@@ -87,12 +98,30 @@ class Store:
         return rev_id
 
     def supersede(self, newer_rev: str, older_rev: str) -> None:
+        for rid in (newer_rev, older_rev):
+            if not self._exists("Rev", "id", rid):
+                raise ValueError(f"unknown revision {rid!r}: call add_revision first")
+        # adding newer -> older closes a cycle if older can already reach newer (or they are equal)
+        cyc = self._run(
+            "MATCH (:Rev {id: $o})-[:SUPERSEDES*0..]->(n:Rev {id: $n}) RETURN count(n) AS n",
+            {"n": newer_rev, "o": older_rev},
+        )
+        if cyc[0]["n"] > 0:
+            raise ValueError(f"{newer_rev!r} superseding {older_rev!r} would create a cycle")
         self._run(
             "MATCH (a:Rev {id: $n}), (b:Rev {id: $o}) MERGE (a)-[:SUPERSEDES]->(b)",
             {"n": newer_rev, "o": older_rev},
         )
 
     def assert_fact(self, rev_id: str, fact_id: str, subject: str, predicate: str, value: str) -> None:
+        if not self._exists("Rev", "id", rev_id):
+            raise ValueError(f"unknown revision {rev_id!r}: call add_revision first")
+        owners = self._run(
+            "MATCH (f:Fact {fid: $f}) OPTIONAL MATCH (r:Rev)-[:ASSERTS]->(f) RETURN r.id AS rev",
+            {"f": fact_id},
+        )
+        if any(o["rev"] not in (None, rev_id) for o in owners):
+            raise ValueError(f"fact id {fact_id!r} is already used by another revision; fact ids must be unique")
         self._run(
             "MATCH (r:Rev {id: $r}) "
             "MERGE (f:Fact {fid: $f}) SET f.subject = $s, f.predicate = $p, f.value = $v "
@@ -108,9 +137,9 @@ class Store:
         return [r["id"] for r in rows]
 
     def history(self, rev_id: str) -> list[str]:
-        """Revisions that `rev_id` replaced, nearest first."""
+        """Revisions that `rev_id` replaced, nearest first (the whole chain, however long)."""
         rows = self._run(
-            "MATCH p=(n:Rev {id: $id})-[:SUPERSEDES*1..20]->(o:Rev) "
+            "MATCH p=(n:Rev {id: $id})-[:SUPERSEDES*1..]->(o:Rev) WHERE o.id <> n.id "
             "RETURN o.id AS id, length(p) AS hops ORDER BY hops",
             {"id": rev_id},
         )
@@ -128,8 +157,8 @@ class Store:
     def contradictions(self) -> list[Contradiction]:
         rows = self._run(
             """
-            MATCH (da:Doc)-[:HAS_REV]->(ra:Rev)-[:ASSERTS]->(a:Fact),
-                  (db:Doc)-[:HAS_REV]->(rb:Rev)-[:ASSERTS]->(b:Fact)
+            MATCH (da:Doc)-[:HAS_REV]->(ra:Rev)-[:ASSERTS]->(a:Fact)
+            MATCH (db:Doc)-[:HAS_REV]->(rb:Rev)-[:ASSERTS]->(b:Fact)
             WHERE a.subject = b.subject AND a.predicate = b.predicate
               AND a.value <> b.value AND a.fid < b.fid
               AND NOT (:Rev)-[:SUPERSEDES]->(ra) AND NOT (:Rev)-[:SUPERSEDES]->(rb)
