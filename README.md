@@ -23,8 +23,9 @@ Model that structure explicitly as a graph, in-process, with no server:
 * **Current** means "not superseded". It is a graph pattern, not a date comparison.
 * A **contradiction** exists only between facts in *current* revisions. A fact from a superseded
   revision is history, not a conflict.
-* Contradictions are **resolved by the authority** of the owning document (regulatory > procedure >
-  work instruction). If authority ties, Supersede says *unresolved* instead of guessing.
+* Contradictions are **resolved by the authority** of the owning document (customer requirement >
+  controlled procedure > work instruction > shift note or email). If authority ties, Supersede says
+  *unresolved* instead of guessing.
 * Every answer carries its **reason** and the **overruled** sources.
 
 ```
