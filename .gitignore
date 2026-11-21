@@ -7,3 +7,5 @@ dist/
 build/
 # generated demo database (recreate with examples/seed_demo.py)
 *.relate
+# local screen capture for the demo video (large binary, not part of the repo)
+demo_terminal_capture.mp4
