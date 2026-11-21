@@ -18,6 +18,7 @@ llm = ["anthropic"]  # only for `examples/demo_session.py --llm`
 
 [project.scripts]
 supersede-mcp = "supersede.mcp_server:main"
+supersede-ingest = "supersede.ingest:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
