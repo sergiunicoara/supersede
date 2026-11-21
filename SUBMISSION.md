@@ -34,6 +34,8 @@ Supersede:                          10 years   from the customer requirement CSR
   Equal authority is reported as `unresolved`, never guessed.
 * **Plain-language questions:** Relate's full-text index finds the topic, then the graph decides the value.
 * **Time:** what was in force on a past date. Missing, mistyped or out-of-order dates are reported, never guessed.
+  A web page draws every revision on a timeline and a **date slider** shows the winning value change as you drag it
+  (pictures of it are in the README).
 * **Lineage:** a revision can record the revision of another document it was written from, so Supersede flags a
   current document that rests on a source that has since been replaced.
 * **MCP server** with eight read-only tools, so any MCP-capable agent can use it: `ask`, `current_answer`,
@@ -79,7 +81,7 @@ Relate connections are thread-affine but an MCP server calls tools from worker t
 work on one dedicated thread. Writes are strict: unknown ids, a reused fact id, a non-integer authority or a cycle
 raise instead of silently doing nothing. Documents load from annotated Markdown, and an optional extraction tool
 proposes facts from plain prose, with guard rails (a fixed vocabulary, a verbatim quote that must appear in the
-text, rejections listed and never written, and a human-review copy). The suite has 143 tests, and CI runs on
+text, rejections listed and never written, and a human-review copy). The suite has 160 tests, and CI runs on
 Linux, macOS and Windows with Python 3.10 to 3.13.
 
 ## Does it work? The numbers, and how to read them
@@ -138,6 +140,7 @@ pip install -e ".[dev]"
 python examples/demo_session.py                  # a naive baseline vs Supersede, offline
 python examples/ask.py "How long must retained samples be kept?"
 python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01
+python web/app.py                                # then open http://127.0.0.1:7860 and drag the date slider
 ```
 
 Requires Python 3.10 or later; nothing needs the network after `pip install`. The persistent Relate store is

@@ -13,6 +13,7 @@ GET /healthz               "ok"
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import pathlib
@@ -24,11 +25,14 @@ from urllib.parse import parse_qs, urlparse
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from supersede.store import Store  # noqa: E402
+import timeline  # noqa: E402
 
 DEFAULT_DB = ROOT / "examples" / "store" / "supersede-demo.relate"
 MAX_QUESTION = 300
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+KEY = re.compile(r"^[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+$")
 EXAMPLES = [
     {"q": "How long must retained samples be kept?"},
     {"q": "What sampling rule applied?", "as_of": "2025-07-01"},
@@ -57,7 +61,7 @@ button.go{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .big{font-size:1.4rem;font-weight:600}.mut{color:var(--mut)}.tag{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--line);font-size:.8rem}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 ul{margin:.4em 0;padding-left:1.2em}footer{margin:24px 0;color:var(--mut);font-size:.85rem}
-details{margin-top:10px}pre{overflow:auto;background:var(--bg);border:1px solid var(--line);padding:8px;border-radius:6px;font-size:.8rem}
+.tlbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.tlbar select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;max-width:100%}.tlbar input[type=range]{flex:1 1 220px}details{margin-top:10px}pre{overflow:auto;background:var(--bg);border:1px solid var(--line);padding:8px;border-radius:6px;font-size:.8rem}
 </style></head><body><main>
 <h1>Supersede</h1>
 <p class="sub">Agent memory that knows which fact is currently in force, and why. Ask about the fictional quality documents.</p>
@@ -65,6 +69,10 @@ details{margin-top:10px}pre{overflow:auto;background:var(--bg);border:1px solid 
 <input id="d" type="date" aria-label="As of date (optional)" title="As of date (optional)"><button class="go" type="submit">Ask</button></form>
 <div class="ex" id="ex"></div>
 <div id="out" aria-live="polite"></div>
+<h2 style="font-size:1.1rem;margin:28px 0 4px">Watch the answer change over time</h2>
+<p class="sub" style="margin:0 0 4px">Pick a question and drag the date. Each bar is a revision, colour is authority, the gold outline is the value in force that day.</p>
+<div class="tlbar"><select id="key" aria-label="Question"></select><input id="slider" type="range" min="0" max="1" value="0" aria-label="Date"><span id="dlabel" class="tag"></span></div>
+<img id="tl" alt="Timeline of the revisions in force" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff">
 <footer>All data is fictional. Read-only; nothing you type is stored. Retrieval is Relate's full-text index; the answer comes from the graph
 (supersession, authority, ties, dates). Source: <a href="https://github.com/sergiunicoara/supersede">github.com/sergiunicoara/supersede</a>.</footer>
 <script>
@@ -95,6 +103,13 @@ async function ask(q,d){
   const u='/api/ask?q='+encodeURIComponent(q)+(d?'&as_of='+encodeURIComponent(d):'');
   try{const res=await fetch(u);render(await res.json())}catch(e){render({error:'Could not reach the server.'})}
 }
+const TL={min:null};
+function addDays(d,n){const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
+function showTl(){const d=addDays(TL.min,+$('slider').value);$('dlabel').textContent=d;$('tl').src='/api/timeline.svg?key='+encodeURIComponent($('key').value)+'&as_of='+d}
+async function loadKey(){const r=await (await fetch('/api/timeline.json?key='+encodeURIComponent($('key').value))).json();TL.min=r.min;const s=$('slider');s.max=r.days;s.value=r.start;showTl()}
+fetch('/api/keys').then(r=>r.json()).then(list=>{const sel=$('key');list.forEach(k=>{const o=el('option','',k.subject+' / '+k.predicate);o.value=k.key;sel.appendChild(o)});
+  if(list.some(k=>k.key==='final_inspection.sampling'))sel.value='final_inspection.sampling';if(list.length)loadKey()});
+$('key').addEventListener('change',loadKey);$('slider').addEventListener('input',showTl);
 $('f').addEventListener('submit',e=>{e.preventDefault();ask($('q').value.trim(),$('d').value)});
 fetch('/api/examples').then(r=>r.json()).then(list=>{list.forEach(x=>{
   const b=el('button','',x.q+(x.as_of?'  ['+x.as_of+']':''));b.type='button';
@@ -137,12 +152,36 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         if url.path == "/":
             csp = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
-                   "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+                   "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
             self._send(200, PAGE.encode("utf-8"), "text/html; charset=utf-8", {"Content-Security-Policy": csp})
         elif url.path == "/healthz":
             self._send(200, b"ok", "text/plain; charset=utf-8")
         elif url.path == "/api/examples":
             self._json(200, EXAMPLES)
+        elif url.path == "/api/keys":
+            self._json(200, [{"key": f"{t['subject']}.{t['predicate']}", **t} for t in get_store().topics()])
+        elif url.path in ("/api/timeline.json", "/api/timeline.svg"):
+            qs = parse_qs(url.query)
+            key = (qs.get("key", [""])[0]).strip()
+            if not KEY.match(key) or len(key) > 120:
+                return self._json(400, {"error": "key must look like subject.predicate"})
+            subject, predicate = key.split(".", 1)
+            if url.path.endswith(".json"):
+                today = dt.date.today()
+                days = [d for f in get_store().timeline(subject, predicate) for d in (f["starts"], f["ends"])
+                        if d and dt.date.fromisoformat(d) <= today.replace(year=today.year + 1)]
+                lo = dt.date.fromisoformat(min(days)) if days else today
+                hi = dt.date.fromisoformat(max(days)) if days else today
+                lo, hi = lo - dt.timedelta(days=30), hi + dt.timedelta(days=120)
+                mid = sorted({dt.date.fromisoformat(d) for d in days})
+                start = ((mid[1] if len(mid) > 1 else mid[0] if mid else lo) - lo).days + 30
+                return self._json(200, {"min": lo.isoformat(), "days": (hi - lo).days, "start": min(start, (hi - lo).days)})
+            as_of = (qs.get("as_of", [""])[0]).strip() or None
+            if as_of is not None and (not DATE.match(as_of) or Store._day(as_of) is None):
+                return self._json(400, {"error": "as_of must be a date like 2025-07-01"})
+            svg = timeline.render_svg(get_store(), subject, predicate, as_of)
+            self._send(200, svg.encode("utf-8"), "image/svg+xml; charset=utf-8",
+                       {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
         elif url.path == "/api/ask":
             qs = parse_qs(url.query)
             q = (qs.get("q", [""])[0]).strip()

@@ -16,11 +16,11 @@ Record the screen and the voice separately, then line them up in the editor.
 | **0:12-0:32 Idea** | `docs/graph.svg` (documents, revisions, facts, SUPERSEDES, DERIVED_FROM, authority). Highlight each edge as it is named. | Supersede keeps that structure in a graph, on Relate, the embedded graph database: documents, revisions, facts, which revision supersedes which, and each document's authority. Relate's full-text index finds the right topic for a question. Cypher traversals decide which fact is in force. |
 | **0:32-1:00 Demo, session** | Capture 1: `python examples/demo_session.py --pause 2.5`. Hold on step 1 (baseline `'3 years'` vs Supersede `'10 years'` with the reason), then step 2 winners, step 3 `unresolved`, step 4 history. | A naive baseline takes the newest fact: three years, from a shift note. Supersede answers ten years, from the customer requirement, and says why. It lists real conflicts with a winner by authority, reports an equal-authority conflict as unresolved instead of guessing, and keeps only the newest revision. |
 | **1:00-1:20 Demo, plain language** | Capture 2: `python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01`, then `python examples/ask.py "Which form do inspectors fill in for final inspection results?"` (the red `STALE` line). | Ask in plain language, for any date. What sampling rule applied in July 2025? And this form number comes with a warning: its source was written from a procedure revision that has since been replaced. |
-| **1:20-1:33 Agent and web** | `docs/agent_transcript.md` (the equal-authority answer), then the web page (only if it is deployed; otherwise stay on the transcript). | A real Claude agent uses the same server over MCP, and refuses to pick between equal-authority sources. There is also a read-only web demo. |
+| **1:20-1:33 Agent and web** | `docs/agent_transcript.md` (the equal-authority answer), then the web page `python web/app.py` (or the deployed one): pick `final_inspection / sampling` and **drag the date slider** across 2024, 2025 and 2026 so the gold outline jumps from bar to bar and the answer changes. | A real Claude agent uses the same server over MCP, and refuses to pick between equal-authority sources. And in the web demo you drag the date and watch the answer change. |
 | **1:33-1:52 Result** | The final lines of `python eval/run_eval.py` (the plain-language and revision sections). | On twenty-three plain-language questions Supersede answers all twenty-three; the same search with a newest-date answer gets thirteen. On nineteen revision questions it gets all nineteen against nine. The data is fictional, and real documents are messier. |
 | **1:52-2:00 Close** | Repo page `github.com/sergiunicoara/supersede`, MIT license visible, text "Built with Relate by Neo4j". | Open source, MIT licensed, at github dot com slash sergiunicoara slash supersede. Built with Relate by Neo4j. |
 
-If the web demo is not deployed, drop "There is also a read-only web demo." from the 1:20 line.
+The slider works on a local `python web/app.py` too, so the video does not need the demo to be deployed. This is the most visual moment: give it a full 5 to 6 seconds of slow dragging.
 
 ## Notes on the claims
 
@@ -59,6 +59,9 @@ python eval\run_eval.py
 **Capture 2** (about 20 s): run the two `ask.py` commands from the table, one after the other, with a
 two-second pause between them.
 
+**Capture 3** (about 10 s, a browser window, not the terminal): open http://127.0.0.1:7860 after `python web/app.py`,
+scroll to "Watch the answer change over time", and drag the slider slowly from early 2024 to 2026.
+
 Nothing needs resetting: the demo builds its store in a temporary folder, and `ask.py` opens the
 committed store read-only.
 
@@ -93,7 +96,7 @@ Place one caption at the start of each segment, white text on a dark band, 2 to 
 | 0:56 | Only the newest revision counts. |
 | 1:00 | Ask in plain language, for any date. |
 | 1:10 | Warning: this source was written from a procedure revision that was replaced. |
-| 1:20 | A real Claude agent uses the same MCP server. |
+| 1:20 | A real Claude agent uses the same MCP server. Drag the date: the answer changes with the revisions. |
 | 1:33 | 23 plain-language questions: 23 correct (same search, newest date: 13). |
 | 1:41 | 19 revision questions: 19 correct (newest-date baseline: 9). |
 | 1:47 | Fictional data; real documents are messier. |
