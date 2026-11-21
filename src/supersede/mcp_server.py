@@ -18,8 +18,11 @@ from .store import Store
 server = MCPServer(
     name="supersede",
     instructions=(
-        "Query a revision-aware knowledge graph. Use current_answer for 'what is in force', "
-        "find_contradictions to audit conflicts between current revisions, and "
+        "Query a revision-aware knowledge graph. Start with ask for a plain-language question: it "
+        "finds the right topic by search and answers it from the graph, with the reason, what it "
+        "overruled and any stale source. Use current_answer when you already know the subject and "
+        "predicate, answer_as_of for 'what was in force on this date', date_warnings to see unreliable "
+        "effective dates, find_contradictions to audit conflicts between current revisions, "
         "revision_history to see what a revision replaced, and stale_derivations to find current "
         "revisions that were written from a source that has since been superseded. Superseded "
         "facts are history, never conflicts."
@@ -37,6 +40,32 @@ def _s() -> Store:
 def current_answer(subject: str, predicate: str) -> dict:
     """Which value is in force for (subject, predicate), with the reason and overruled sources."""
     return _s().answer(subject, predicate)
+
+
+@server.tool()
+def ask(question: str, as_of: str | None = None) -> dict:
+    """Answer a plain-language question, e.g. 'how long must retained samples be kept?'.
+
+    Search finds the matching topic; the graph decides the value in force (supersession, authority,
+    ties), names the reason and the overruled sources, and warns if the revisions it rests on were
+    written from a source that has since been superseded. Optional as_of is a date YYYY-MM-DD.
+    status is no_match when no topic fits the question.
+    """
+    return _s().ask(question, as_of=as_of)
+
+
+@server.tool()
+def answer_as_of(subject: str, predicate: str, date: str) -> dict:
+    """Which value was in force for (subject, predicate) on a date (YYYY-MM-DD), with warnings about
+    missing, wrong or inconsistent effective dates that could affect the answer."""
+    return _s().answer(subject, predicate, as_of=date)
+
+
+@server.tool()
+def date_warnings() -> list[dict]:
+    """Effective-date problems in the store: missing or unreadable dates, dates in the future, and
+    revisions dated before the revision they replace."""
+    return _s().date_warnings()
 
 
 @server.tool()

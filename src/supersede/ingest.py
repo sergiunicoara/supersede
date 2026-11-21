@@ -23,6 +23,7 @@ Usage:  python -m supersede.ingest DIR --db PATH     (PATH must not exist yet)
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -92,15 +93,20 @@ def split_document(text: str, source: str = "<text>") -> tuple[str, str]:
     return "\n".join(lines[: end + 1]) + "\n", "\n".join(lines[end + 1:])
 
 
-def ingest_directory(store: Store, directory: str | os.PathLike) -> tuple[int, int, int]:
-    """Load every ``*.md`` file in `directory`. Returns (documents, revisions, facts)."""
+def ingest_directory(store: Store, directory: str | os.PathLike,
+                     topics: dict[str, str] | None = None) -> tuple[int, int, int]:
+    """Load every ``*.md`` file in `directory`. Returns (documents, revisions, facts).
+
+    `topics` ({"subject.predicate": "description"}) makes the store searchable with Store.ask().
+    """
     revisions = [parse(p.read_text(encoding="utf-8"), p.name) for p in sorted(Path(directory).glob("*.md"))]
     if not revisions:
         raise ValueError(f"no *.md documents found in {directory}")
-    return load_revisions(store, revisions)
+    return load_revisions(store, revisions, topics)
 
 
-def load_revisions(store: Store, revisions: list[Revision]) -> tuple[int, int, int]:
+def load_revisions(store: Store, revisions: list[Revision],
+                   topics: dict[str, str] | None = None) -> tuple[int, int, int]:
     """Validate and load parsed revisions. Returns (documents, revisions, facts)."""
     authority: dict[str, tuple[int, str]] = {}
     seen: set[tuple[str, int]] = set()
@@ -132,6 +138,9 @@ def load_revisions(store: Store, revisions: list[Revision]) -> tuple[int, int, i
     for r in ordered:
         for src in r.derived_from:
             store.derive(f"{r.doc}-r{r.rev}", src)
+    for key, description in (topics or {}).items():
+        subject, predicate = key.split(".", 1)
+        store.add_topic(subject, predicate, description)
     store.commit()
     return len(authority), len(revisions), n_facts
 
@@ -140,12 +149,15 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Load annotated Markdown documents into a new Relate store.")
     ap.add_argument("directory", help="folder with one *.md file per document revision")
     ap.add_argument("--db", required=True, help="path of the new store (must not exist)")
+    ap.add_argument("--topics", help='JSON file {"subject.predicate": "description"}: makes the store '
+                                     "searchable with ask() (the extraction vocabulary has this shape)")
     args = ap.parse_args()
     if os.path.exists(args.db):
         ap.error(f"{args.db} already exists; pass a new path (this never merges into a store)")
     store = Store(args.db)
     try:
-        d, r, f = ingest_directory(store, args.directory)
+        topics = json.loads(Path(args.topics).read_text(encoding="utf-8")) if args.topics else None
+        d, r, f = ingest_directory(store, args.directory, topics)
     finally:
         store.close()
     print(f"ingested {d} documents, {r} revisions, {f} facts into {args.db}")

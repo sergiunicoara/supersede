@@ -7,7 +7,9 @@ authority level of the owning document.
 """
 from __future__ import annotations
 
+import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date as _date
 from dataclasses import dataclass
 from typing import Any
 
@@ -114,6 +116,20 @@ class Store:
             {"n": newer_rev, "o": older_rev},
         )
 
+    def add_topic(self, subject: str, predicate: str, description: str) -> None:
+        """Describe a (subject, predicate) key in plain language so `ask()` can find it by search.
+
+        Relate's full-text index (BM25) is built over these descriptions. Include the words a person
+        would use in a question, including synonyms.
+        """
+        if not description.strip():
+            raise ValueError("a topic needs a non-empty description")
+        self._run("CREATE FULLTEXT INDEX topic_text IF NOT EXISTS FOR (t:Topic) ON EACH [t.description]")
+        self._run(
+            "MERGE (t:Topic {key: $k}) SET t.subject = $s, t.predicate = $p, t.description = $d",
+            {"k": f"{subject}.{predicate}", "s": subject, "p": predicate, "d": description},
+        )
+
     def derive(self, derived_rev: str, source_rev: str) -> None:
         """Record that `derived_rev` was written from `source_rev`, a revision of ANOTHER document.
 
@@ -207,6 +223,56 @@ class Store:
         )
         return [{**r, "replaced_by": self._replacements(r["source"])} for r in rows]
 
+    # -- time: what was in force on a given date ------------------------
+    @staticmethod
+    def _day(text: Any) -> _date | None:
+        """A strict YYYY-MM-DD date, or None for blank or malformed text."""
+        try:
+            return _date.fromisoformat(str(text)) if text else None
+        except ValueError:
+            return None
+
+    def date_warnings(self) -> list[dict[str, str]]:
+        """Effective-date problems that make a date-based answer unreliable.
+
+        Blank or malformed dates, dates far in the future, and a revision dated earlier than the
+        revision it supersedes. Nothing is fixed or guessed: the problems are reported.
+        """
+        revs = self._run("MATCH (r:Rev) RETURN r.id AS id, r.effective AS eff ORDER BY id")
+        eff = {r["id"]: r["eff"] for r in revs}
+        out: list[dict[str, str]] = []
+        limit = _date.today().replace(year=_date.today().year + 1)
+        for rid, e in eff.items():
+            d = self._day(e)
+            if d is None:
+                out.append({"revision": rid, "issue": "missing_date" if not e else "invalid_date",
+                            "detail": "no effective date" if not e else f"cannot read {e!r} as YYYY-MM-DD"})
+            elif d > limit:
+                out.append({"revision": rid, "issue": "future_date", "detail": f"dated {e}, in the future"})
+        for e in self._run("MATCH (n:Rev)-[:SUPERSEDES]->(o:Rev) RETURN n.id AS n, o.id AS o ORDER BY n, o"):
+            dn, do = self._day(eff.get(e["n"])), self._day(eff.get(e["o"]))
+            if dn and do and dn < do:
+                out.append({"revision": e["n"], "issue": "dated_before_predecessor",
+                            "detail": f"supersedes {e['o']} ({eff[e['o']]}) but is dated {eff[e['n']]}"})
+        return out
+
+    def in_force(self, as_of: str) -> set[str]:
+        """Revisions in force on `as_of` (YYYY-MM-DD), taking the effective dates at face value.
+
+        A revision is in force if it is dated on or before that day and no revision that supersedes
+        it is. A revision without a usable date can never be placed on the timeline, so it is
+        neither in force nor able to end its predecessor; `date_warnings()` reports such cases.
+        """
+        day = self._day(as_of)
+        if day is None:
+            raise ValueError(f"as_of must be a date like 2025-07-01, got {as_of!r}")
+        eff = {r["id"]: self._day(r["eff"]) for r in self._run("MATCH (r:Rev) RETURN r.id AS id, r.effective AS eff")}
+        ended: set[str] = set()
+        for e in self._run("MATCH (n:Rev)-[:SUPERSEDES]->(o:Rev) RETURN n.id AS n, o.id AS o"):
+            if eff.get(e["n"]) is not None and eff[e["n"]] <= day:
+                ended.add(e["o"])
+        return {rid for rid, d in eff.items() if d is not None and d <= day and rid not in ended}
+
     def current_facts(self, subject: str, predicate: str) -> list[dict[str, Any]]:
         return self._run(
             "MATCH (d:Doc)-[:HAS_REV]->(r:Rev)-[:ASSERTS]->(f:Fact) "
@@ -238,11 +304,10 @@ class Store:
             for r in rows
         ]
 
-    def answer(self, subject: str, predicate: str) -> dict[str, Any]:
-        """Which value is in force, and why. Authority wins; a tie is reported, not hidden."""
-        facts = self.current_facts(subject, predicate)
+    def _decide(self, facts: list[dict[str, Any]], none_reason: str) -> dict[str, Any]:
+        """Which value wins among facts already sorted by authority. A tie is reported, not hidden."""
         if not facts:
-            return {"status": "unknown", "reason": "no current fact asserted"}
+            return {"status": "unknown", "reason": none_reason}
         top = facts[0]
         values = {f["value"] for f in facts}
         if len(values) == 1:
@@ -258,3 +323,77 @@ class Store:
             "reason": f"{top['doc']} (authority {top['authority']}) outranks the conflicting source(s)",
             "overruled": [f for f in facts if f["value"] != top["value"]],
         }
+
+    def answer(self, subject: str, predicate: str, as_of: str | None = None) -> dict[str, Any]:
+        """Which value is in force, and why. Authority wins; a tie is reported, not hidden.
+
+        With `as_of` (YYYY-MM-DD) it answers for that day instead of today: only revisions in force
+        that day count, and any date problem that could affect the answer is reported in
+        `warnings` (a blank or wrong date is never guessed).
+        """
+        if as_of is None:
+            return self._decide(self.current_facts(subject, predicate), "no current fact asserted")
+        in_force = self.in_force(as_of)
+        every = self._run(
+            "MATCH (d:Doc)-[:HAS_REV]->(r:Rev)-[:ASSERTS]->(f:Fact) "
+            "WHERE f.subject = $s AND f.predicate = $p "
+            "RETURN f.fid AS fact, f.value AS value, r.id AS rev, d.id AS doc, d.authority AS authority "
+            "ORDER BY authority DESC, fact",
+            {"s": subject, "p": predicate},
+        )
+        result = self._decide([f for f in every if f["rev"] in in_force], f"no fact in force on {as_of}")
+        docs = {f["doc"] for f in every}
+        warnings = [w for w in self.date_warnings() if w["revision"].rsplit("-r", 1)[0] in docs]
+        result["as_of"] = as_of
+        if warnings:
+            result["warnings"] = warnings
+        return result
+
+    # -- retrieval: find the key from a question, then reason over the graph --
+    _STOP = frozenset(
+        "a an and are as at be but by can do does for from had has have how i if in into is it its may "
+        "many much me my no not of on or our shall should so than that the their then there these they this to "
+        "us was we were what when where which who why will with would you your".split())
+
+    def ask(self, question: str, k: int = 3, as_of: str | None = None) -> dict[str, Any]:
+        """Answer a plain-language question: retrieval finds the topic, the graph decides the value.
+
+        Relate's full-text search (BM25 over the topic descriptions) picks the best (subject,
+        predicate) keys; the best one is answered with `answer()`, so supersession, authority, ties
+        and dates all apply. The answer also says if the revisions it rests on were written from a
+        source that has since been superseded.
+        """
+        terms = [t for t in re.findall(r"[a-z0-9]+", question.lower()) if t not in self._STOP]
+        if not terms:
+            return {"question": question, "status": "no_match", "reason": "the question has no searchable words"}
+        try:
+            hits = self._run(
+                "MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT " + str(int(k)) + ") "
+                "SCORE AS score RETURN t.subject AS subject, t.predicate AS predicate, "
+                "t.description AS description, score ORDER BY score DESC",
+                {"q": " ".join(terms)},
+            )
+        except Exception as exc:  # no topic index yet: the store was built without topics
+            if "index" in str(exc).lower():
+                return {"question": question, "status": "no_topics",
+                        "reason": "this store has no topic descriptions; add them with Store.add_topic()"}
+            raise
+        if not hits:
+            return {"question": question, "status": "no_match", "reason": "no topic matches the question"}
+        best = hits[0]
+        ans = self.answer(best["subject"], best["predicate"], as_of)
+        sources = set(ans.get("sources", [])) | ({ans["source"]} if "source" in ans else set()) \
+            | {c["rev"] for c in ans.get("candidates", [])}
+        stale = [d for d in self.stale_derivations() if d["revision"] in sources]
+        out: dict[str, Any] = {
+            "question": question,
+            "status": ans["status"],
+            "matched": {"subject": best["subject"], "predicate": best["predicate"],
+                        "description": best["description"], "score": round(best["score"], 3)},
+            "answer": ans,
+            "alternatives": [{"subject": h["subject"], "predicate": h["predicate"], "score": round(h["score"], 3)}
+                             for h in hits[1:]],
+        }
+        if stale:
+            out["stale_sources"] = stale
+        return out

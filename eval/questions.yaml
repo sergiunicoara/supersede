@@ -47,3 +47,47 @@ lineage:
     revision: WI-24-r1
     expected:
       - {source: WI-20-r1, hops: 1, current: true, replaced_by: []}
+
+# Plain-language questions for ask(): retrieval finds the topic, the graph decides the value.
+# Written as a person would phrase them, with paraphrases, ambiguous wording and off-topic questions.
+# expected_key null = nothing in the knowledge base answers it (status no_match).
+retrieval:
+  - {id: r01, question: "For how long do we have to store the reference samples we keep from each lot?", expected_key: retained_sample.retention_period, expected_status: resolved, expected_value: "10 years"}
+  - {id: r02, question: "What time limit does the customer give us to report a quality problem?", expected_key: customer_notification.hours, expected_status: agreed, expected_value: "24"}
+  - {id: r03, question: "How frequently do you audit your suppliers?", expected_key: supplier_audit.frequency, expected_status: agreed, expected_value: "annual"}
+  - {id: r04, question: "How much advance warning is a supplier given before an audit visit on site?", expected_key: supplier_audit.on_site_notice_days, expected_status: agreed, expected_value: "7"}
+  - {id: r05, question: "What thickness should the paint coat be?", expected_key: paint_line.film_thickness_um, expected_status: resolved, expected_value: "70-90"}
+  - {id: r06, question: "How long does the paint have to bake?", expected_key: paint_line.cure_time_min, expected_status: agreed, expected_value: "35"}
+  - {id: r07, question: "Which inspection level do we use on finished parts?", expected_key: final_inspection.sampling, expected_status: resolved, expected_value: "AQL 0.65"}
+  - {id: r08, question: "How long do we keep the records of the final inspection?", expected_key: final_inspection.record_retention, expected_status: agreed, expected_value: "5 years"}
+  - {id: r09, question: "Which form do inspectors fill in for final inspection results?", expected_key: final_inspection.record_form, expected_status: agreed, expected_value: "FORM-9"}
+  - {id: r10, question: "How often must we calibrate our gauges?", expected_key: gauge_calibration.interval, expected_status: agreed, expected_value: "6 months"}
+  - {id: r11, question: "After how many parts do we swap the cutting tools in the machining cell?", expected_key: machining_cell.tool_change_interval, expected_status: unresolved}
+  - {id: r12, question: "What changeover time are we aiming for on line 3?", expected_key: line_3.changeover_target_min, expected_status: unresolved}
+  - {id: r13, question: "How long should the furnace warm up before loading?", expected_key: furnace_loading.preheat_minutes, expected_status: agreed, expected_value: "30"}
+  - {id: r14, question: "What is the heaviest load we may put in a furnace basket?", expected_key: furnace_loading.max_basket_kg, expected_status: agreed, expected_value: "300"}
+  - {id: r15, question: "What torque do we use on the cylinder head bolts?", expected_key: fastening.head_bolt_torque, expected_status: agreed, expected_value: "48 Nm"}
+  - {id: r16, question: "How tight do the cover bolts need to be?", expected_key: fastening.cover_bolt_torque, expected_status: agreed, expected_value: "24 Nm"}
+  - {id: r17, question: "Do we still need thread locker on the bolts?", expected_key: fastening.thread_locker, expected_status: unknown}
+  - {id: r18, question: "Can a part that failed the leak test be tried again?", expected_key: leak_test.retest_allowed, expected_status: unknown}
+  - {id: r19, question: "At what pressure is the leak test run?", expected_key: leak_test.pressure_bar, expected_status: agreed, expected_value: "2.5"}
+  - {id: r20, question: "What is the lunch break schedule for the night shift?", expected_key: null, expected_status: no_match}
+  - {id: r21, question: "Who is the plant manager?", expected_key: null, expected_status: no_match}
+  - {id: r22, question: "What colour are the delivery trucks?", expected_key: null, expected_status: no_match}
+  - {id: r23, question: "How many holidays do employees get?", expected_key: null, expected_status: no_match}
+
+# What was in force on a date? expected_warnings lists the date problems that must be reported.
+as_of:
+  - {id: t01, subject: final_inspection, predicate: sampling, date: "2024-06-01", expected_status: agreed, expected_value: "100% inspection", expected_source: QP-07-r1}
+  - {id: t02, subject: final_inspection, predicate: sampling, date: "2025-04-01", expected_status: agreed, expected_value: "AQL 1.0", expected_source: QP-07-r2}
+  - {id: t03, subject: final_inspection, predicate: sampling, date: "2025-07-01", expected_status: resolved, expected_value: "AQL 1.0", expected_source: QP-07-r2}
+  - {id: t04, subject: final_inspection, predicate: sampling, date: "2025-12-01", expected_status: resolved, expected_value: "AQL 0.65", expected_source: QP-07-r3}
+  - {id: t05, subject: gauge_calibration, predicate: interval, date: "2025-01-01", expected_status: agreed, expected_value: "12 months", expected_source: QP-11-r1}
+  - {id: t06, subject: gauge_calibration, predicate: interval, date: "2025-10-01", expected_status: agreed, expected_value: "6 months", expected_source: QP-11-r2}
+  - {id: t07, subject: supplier_audit, predicate: frequency, date: "2023-12-01", expected_status: agreed, expected_value: "every 3 years", expected_source: QP-18-r1}
+  - {id: t08, subject: supplier_audit, predicate: frequency, date: "2024-12-01", expected_status: unresolved}
+  - {id: t09, subject: supplier_audit, predicate: frequency, date: "2025-09-01", expected_status: agreed, expected_value: "annual", expected_source: QP-18-r3}
+  - {id: t10, subject: fastening, predicate: head_bolt_torque, date: "2025-10-01", expected_status: agreed, expected_value: "48 Nm", expected_source: QP-22-r2, expected_warnings: [dated_before_predecessor, future_date]}
+  - {id: t11, subject: fastening, predicate: head_bolt_torque, date: "2025-08-01", expected_status: unknown, expected_warnings: [dated_before_predecessor, future_date]}
+  - {id: t12, subject: furnace_loading, predicate: preheat_minutes, date: "2025-01-01", expected_status: agreed, expected_value: "20", expected_source: WI-31-r1, expected_warnings: [missing_date]}
+  - {id: t13, subject: furnace_loading, predicate: preheat_minutes, date: "2026-06-01", expected_status: agreed, expected_value: "20", expected_source: WI-31-r1, expected_warnings: [missing_date]}

@@ -118,7 +118,8 @@ async def session(demo: Demo, docs: list[dict], db: str, log, use_llm: bool) -> 
         tools = [t.name for t in (await client.list_tools()).tools]
         demo.line(c("Supersede", "bold") + " - agent memory that knows which fact is in force, and why")
         demo.line(f"corpus: {d_n} documents, {r_n} revisions, {f_n} facts (all fictional)")
-        demo.line("MCP tools: " + ", ".join(tools))
+        demo.line(f"MCP tools ({len(tools)}): " + ", ".join(sorted(tools)[:4]) + ",")
+        demo.line("  " + ", ".join(sorted(tools)[4:]))
         demo.beat(1.5)
 
         # 1 ---------------------------------------------------------------------------------
