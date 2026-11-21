@@ -130,6 +130,29 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `retrieval-asof` PR (suggestions to raise the score).**
+
+- **Retrieval plus graph:** `ask()` uses Relate's full-text index (BM25, persists in the directory store
+  and on a read-only open) over topic descriptions, then answers from the graph. 23 plain-language
+  questions: right topic first 23/23 (name-overlap baseline 17/23), correct end to end 23/23 (same
+  retrieval with a newest-date answer 13/23). First run was 22/23; the fix (stop words "many", "much")
+  was informed by the miss. Vector search is not used (it needs embeddings the user supplies).
+- **As-of queries and date warnings:** `answer(..., as_of=)`; 13/13 against 11/13 for the newest fact
+  before the date. Blank, unreadable, future and out-of-order dates are reported, not guessed; an
+  undated revision cannot end its predecessor (a documented limit, in the eval on purpose).
+- **Real agent:** `examples/agent_demo.py`, a recorded run in `docs/agent_transcript.md` (verbatim, one
+  misread tool result in the last answer is noted in the README).
+- **Hosted demo:** a read-only web page (`web/app.py`, standard library only) and a Dockerfile. Verified
+  as a real image (non-root, store unchanged); **not deployed**: that needs a Hugging Face account
+  (`docs/DEPLOY.md`).
+- **Judge fast path:** the README starts with "Try it in 2 minutes"; `examples/ask.py` asks one question.
+- **Video:** the script is rewritten for these features (229 words, about 92 s) with a captions-only
+  version, since the rules do not require a voice. Not recorded.
+- Eight MCP tools now. Found by the web tests: `ask()` accepted an invalid date when nothing matched
+  (fixed).
+
+---
+
 **Update after the real-documents step (audit suggestion 5).**
 
 - Two real federal regulation sections (48 CFR 13.000 and 3.1004) at three dated versions each, from the

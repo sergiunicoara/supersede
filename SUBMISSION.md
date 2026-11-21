@@ -292,6 +292,10 @@ purpose: a revision with no effective date cannot be placed on the timeline, so 
 change the answer is still the older value, with a warning saying so, while today's answer (which
 follows the revision chain) is the newer one.
 
+**A read-only web demo.** `web/app.py` serves a page over the committed fictional store (standard
+library only, no keys, no writes) and ships as a Docker image, which I built and ran to verify it. It
+is hosted only if you add the link here: `docs/DEPLOY.md` has the Hugging Face Spaces steps.
+
 **A real agent.** `examples/agent_demo.py` gives a Claude model the MCP tools and lets it choose.
 A recorded run (`docs/agent_transcript.md`, verbatim) shows it declining to pick between two
 equal-authority sources, using `answer_as_of` for a past date, flagging a stale source, and
