@@ -65,6 +65,19 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `audit-followups` PR (D8, D9, D10, D11, D12, D15).**
+
+| Item | Now |
+|---|---|
+| D8 server | opens an existing store **read-only** and refuses a `--db` path that does not exist (a test shows the files stay byte-identical, and that nothing is created) |
+| D9 pins | `relate-db>=1.2.0,<1.3`, `mcp>=2,<3`, `pyyaml>=6,<7`, `pytest>=8`; a fresh venv resolves to relate-db 1.2.0 / mcp 2.3.0 / PyYAML 6.0.4 and the suite passes. `anthropic` (optional, `--llm`) is left unpinned |
+| D10 | the "demo video shows" sentence is reworded; capabilities list was added earlier |
+| D11 | README follows the overview template: Use case / How it uses Relate (Mode, Why this mode, What the graph models) / Setup and run / Where the data lives; Disclosures unchanged word for word |
+| D12 | `supersede.ingest` loads annotated Markdown (header plus inline `{{subject.predicate = value}}`); deterministic, no new dependency; **it does not extract facts from unannotated text** |
+| D15 | see the CI results recorded in the PR; locally only Windows / Python 3.11 was run |
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |

@@ -4,29 +4,41 @@
 
 Built for the Relate by Neo4j Hackathon on [Relate](https://relatedb.ai), the embedded graph database.
 
-## The problem
+## Use case
 
 Agents that remember facts from documents hit the same failure: a procedure gets revised, the old
 revision is still in memory, and the agent happily quotes the stale one. Two documents disagree and
 the agent picks whichever its retrieval returned first. Vector memory has no notion of *"this
 replaced that"* or *"this source outranks that one"*.
 
-## The idea
+**Who it is for:** quality and compliance teams, and the agents that work over their revised
+procedures, customer requirements, work instructions and shift notes, where quoting a superseded
+value, or picking the wrong one of two conflicting documents, has real consequences.
 
-Model that structure explicitly as a graph, in-process, with no server:
+**Which relationships matter:** which revision replaced which (`SUPERSEDES`), which document a fact
+comes from, and how much that document outranks another (authority).
+
+## How it uses Relate
+
+* **Mode:** persistent on-disk store, in **directory** mode (`--db path`; Relate keeps it as a
+  directory). `:memory:` is used only by tests and one-off scripts.
+* **Why this mode:** the revision history is the point of the project, and in-memory data
+  disappears when the process stops. A directory store survives restarts, can be inspected, and a
+  small one is committed in this repo (see [Where the data lives](#where-the-data-lives)).
+* **What the graph models:**
 
 ```
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
 (Rev)-[:SUPERSEDES]->(Rev)
 ```
 
-* **Current** means "not superseded". It is a graph pattern, not a date comparison.
-* A **contradiction** exists only between facts in *current* revisions. A fact from a superseded
-  revision is history, not a conflict.
-* Contradictions are **resolved by the authority** of the owning document (customer requirement >
-  controlled procedure > work instruction > shift note or email). If authority ties, Supersede says
-  *unresolved* instead of guessing.
-* Every answer carries its **reason** and the **overruled** sources.
+  * **Current** means "not superseded". It is a graph pattern, not a date comparison.
+  * A **contradiction** exists only between facts in *current* revisions. A fact from a superseded
+    revision is history, not a conflict.
+  * Contradictions are **resolved by the authority** of the owning document (customer requirement >
+    controlled procedure > work instruction > shift note or email). If authority ties, Supersede
+    says *unresolved* instead of guessing.
+  * Every answer carries its **reason** and the **overruled** sources.
 
 ```
 current_answer("final_inspection", "sampling")
@@ -35,20 +47,18 @@ current_answer("final_inspection", "sampling")
     "overruled": [{"fact": "F04", "value": "100% inspection", "rev": "WI-12-r1", ...}]}
 ```
 
-## Why Relate
-
 Relate is an embedded graph database with Cypher, so the supersession chains, the "not superseded"
 pattern, and the cross-document contradiction join are each a short Cypher query, running in the
-agent's own process. The store persists on disk between runs.
+agent's own process.
 
-Relate capabilities used: the embedded Python DB-API (`relate.connect`, `$name` parameters, commit,
-close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts; `NOT (...)`
-pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `*0..` for the cycle
-check) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. Not used: vector or
+**Relate capabilities used:** the embedded Python DB-API (`relate.connect`, `$name` parameters,
+commit, close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts;
+`NOT (...)` pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `*0..` for the
+cycle check) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. **Not used:** vector or
 full-text search, Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its
 own MCP server with domain tools instead.
 
-## Quick start
+## Setup and run
 
 Requires Python 3.10 or later. No network access is needed after `pip install`.
 
@@ -57,12 +67,12 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 37 tests
+python -m pytest -q                          # 52 tests
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
 
-## Demo
+### Demo
 
 A scripted agent session over a larger fictional corpus (15 documents, 25 revisions, 46 facts;
 the cases are described in [examples/corpus/CASES.md](examples/corpus/CASES.md)). It starts the
@@ -80,9 +90,11 @@ read from the environment only and is never stored.
 
 ### Use it from an MCP client
 
-MCP hosts start the server from their own working directory, so use **absolute paths** for both
-the Python in this repo's `.venv` and the store. A relative `--db` path silently creates a new,
-empty store in the host's directory.
+Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`.
+
+Every tool only reads, so the server opens an existing store **read-only**, and it refuses a
+`--db` path that does not exist. MCP hosts start the server from their own working directory, so
+use **absolute paths** for both the Python in this repo's `.venv` and the store.
 
 ```json
 {
@@ -99,11 +111,29 @@ empty store in the host's directory.
 On Windows the Python path is `C:\\path\\to\\supersede\\.venv\\Scripts\\python.exe`. After
 `pip install -e .` no `PYTHONPATH` is needed.
 
-Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`.
+### Load your own documents
 
-Relate mode used: **persistent on-disk store** (`--db path`; Relate keeps it as a directory), with
-`:memory:` as the default for tests. Memory-only would lose the revision history between runs,
-which is the point of the project.
+Write one Markdown file per document revision: a small header, and facts marked inline in the
+prose with `{{subject.predicate = value}}` (see [examples/documents](examples/documents/)).
+
+```markdown
+---
+doc: QP-40
+title: Packaging and labelling procedure
+authority: 3
+revision: 2
+effective: 2025-10-01
+supersedes: 1
+---
+Finished castings are packed {{packaging.units_per_box = 24}} to a box.
+```
+
+```bash
+python -m supersede.ingest examples/documents --db my-store.relate   # the path must not exist yet
+```
+
+This reads facts that an author has marked; it does **not** extract facts from unannotated text.
+Programmatic use: `supersede.ingest.ingest_directory(store, folder)`.
 
 ## Where the data lives
 
@@ -112,7 +142,15 @@ A persistent store you can inspect is committed at
 fictional corpus: 15 documents, 25 revisions, 46 facts). Open it with
 `relate.connect(path, read_only=True)` or point the MCP server at it;
 [examples/store/README.md](examples/store/README.md) has the commands and how to regenerate it.
-`demo.relate` from the quick start is a separate local store and is not committed.
+`demo.relate` from the setup commands is a separate local store and is not committed.
+
+## Results
+
+`python eval/run_eval.py` runs 19 questions over the fictional corpus: **Supersede 19/19**, a
+newest-effective-date baseline 9/19, and two ablations that each keep one part of the graph
+(following `SUPERSEDES` only 15/19, authority only 11/19). The cases are in
+[examples/corpus/CASES.md](examples/corpus/CASES.md). The data is fictional and the cases were
+designed, so this shows behavior, not performance on real documents, which are messier.
 
 ## Design notes
 
