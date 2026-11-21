@@ -130,6 +130,19 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `polish` PR (a skeptical-judge read of the README and submission).**
+
+- **Fixed factual errors found by the read:** both files said all data was fictional and used no third-party
+  documents, which stopped being true when real regulation text was added (the Data disclosure now says what is
+  real, public domain and sourced); stale counts ("13 documents in 5 chains", now 16 in 7); a README Results section
+  that ignored the retrieval, as-of and real-data results; internal workflow text in the Devpost copy.
+- **Length:** `SUBMISSION.md` went from about 4,300 to 1,600 words and the README from about 2,500 to 2,200. All
+  measurements, with blind and informed runs and limits, now live in one page, `docs/EVIDENCE.md`; the README has a
+  consolidated Limits section and a before/after example on the first screen.
+- No code changed.
+
+---
+
 **Update after the `real-hierarchy` PR (a real authority hierarchy).**
 
 - Tests the authority mechanism on a **real** hierarchy: FDA's non-binding 2016 guidance *Medical Device Reporting for
