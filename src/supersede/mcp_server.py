@@ -8,6 +8,7 @@ Run:  python -m supersede.mcp_server --db kb.relate
 from __future__ import annotations
 
 import argparse
+import os
 from dataclasses import asdict
 
 from mcp.server.mcpserver import MCPServer
@@ -57,10 +58,19 @@ def revision_history(rev_id: str) -> list[str]:
 
 def main() -> None:
     global _store
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=":memory:", help="Relate database path (default: in-memory)")
+    ap = argparse.ArgumentParser(
+        description="Supersede MCP server (stdio). Every tool only reads, so an existing store is "
+                    "opened read-only; the path must exist (build one with examples/load_corpus.py).")
+    ap.add_argument("--db", default=":memory:",
+                    help="path of an existing Relate store (default: an empty in-memory store)")
     args = ap.parse_args()
-    _store = Store(args.db)
+    in_memory = args.db == ":memory:"
+    if not in_memory and not os.path.exists(args.db):
+        # Without this check an MCP host that starts the server from another directory would
+        # silently get a new, empty store.
+        ap.error(f"store not found: {args.db} (use an absolute path; create one with "
+                 f"examples/load_corpus.py or examples/seed_demo.py)")
+    _store = Store(args.db, read_only=not in_memory)
     try:
         server.run("stdio")
     finally:

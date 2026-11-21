@@ -43,9 +43,10 @@ class Store:
     executor keeps one connection valid for both file and in-memory databases.
     """
 
-    def __init__(self, path: str = ":memory:") -> None:
+    def __init__(self, path: str = ":memory:", read_only: bool = False) -> None:
+        """`read_only=True` opens an existing store without taking the writer lock (queries only)."""
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="relate")
-        self._conn = self._pool.submit(relate.connect, path).result()
+        self._conn = self._pool.submit(relate.connect, path, read_only=read_only).result()
 
     # -- plumbing ---------------------------------------------------------
     def _run_sync(self, query: str, params: dict[str, Any] | None) -> list[dict[str, Any]]:

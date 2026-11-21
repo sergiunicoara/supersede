@@ -108,13 +108,16 @@ Cypher support surface rather than assumed Neo4j parity.
 
 The store (`Store`) wraps Relate with a small write API (add document, add revision, supersede,
 assert fact) and the read queries above. The MCP server exposes the four tools using the MCP Python
-SDK. `examples/mcp_smoke.py` spawns the server over stdio and calls it the way an agent would.
+SDK; every tool only reads, so it opens an existing store read-only and refuses a path that does
+not exist. `examples/mcp_smoke.py` spawns the server over stdio and calls it the way an agent would.
+Documents can be loaded from annotated Markdown (`python -m supersede.ingest`): one file per
+revision, a small header, and facts marked inline with `{{subject.predicate = value}}`.
 
 To test it beyond a handful of facts I wrote a fictional automotive-quality corpus (15 documents,
 25 revisions, 46 facts; `examples/corpus/`) with nine deliberate cases (`CASES.md`), a 19-question
 eval (`eval/run_eval.py`), a naive baseline and two ablations for comparison (`eval/baseline.py`), and a scripted
-agent session that drives the MCP server end to end (`examples/demo_session.py`), which is what the
-demo video shows.
+agent session that drives the MCP server end to end (`examples/demo_session.py`), which the demo
+video follows.
 
 **The thread-affinity issue.** Relate connections are thread-affine (DB-API `threadsafety = 1`),
 but an MCP server dispatches tool calls on worker threads, so a connection created on one thread
@@ -199,8 +202,9 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 37 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
-  chain, a conflict inside one revision) and one that runs the demo end to end over MCP.
+* The suite has 52 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+  chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
+  a store byte-identical, and one that runs the demo end to end over MCP.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always
@@ -211,8 +215,9 @@ corpora.
 
 These are plans, not features in the repo today.
 
-* **Ingestion.** Today facts and `SUPERSEDES` links are written through the `Store` API; there is no
-  document parsing. Next would be extracting facts and revision links from documents.
+* **Automatic extraction.** Ingestion today reads facts that an author has marked inline in
+  Markdown; it does not extract facts or revision links from unannotated text. Doing that reliably
+  is the next step.
 * **Value normalisation.** Contradictions compare values as exact strings, so `100%` and
   `100% inspection` count as different. Normalising values (or adding a similarity check) would cut
   false conflicts.
