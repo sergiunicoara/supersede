@@ -13,6 +13,11 @@ Supersede:                          10 years   from the customer requirement, be
 Supersede keeps documents, their revisions and their authority as a graph, so an agent gets the value that is
 **in force**, with the reason, instead of the best-matching or newest text.
 
+![The same question on 2025-07-01: each bar is a revision, colour is authority, the gold outline is the value in force. A work instruction says 100% inspection, the higher-authority procedure says AQL 1.0, and the procedure wins.](docs/img/timeline-final_inspection-sampling-2025-07-01.svg)
+
+*The sampling rule on 2025-07-01, drawn from the real store: each bar is a revision, colour is authority, the gold
+outline is the value in force. `python web/app.py` has a slider that moves the date and redraws this.*
+
 ## Try it in 2 minutes
 
 After the install in [Setup and run](#setup-and-run) (about 90 seconds, then everything below is
@@ -30,6 +35,22 @@ shift note says 3 years (authority beats date, and the reason is shown). The sec
 past date. The third names the form but also flags that its source was written from a procedure
 revision that has since been replaced (**stale**). A real Claude agent doing the same over MCP:
 [docs/agent_transcript.md](docs/agent_transcript.md).
+
+## Watch the answer change over time
+
+The same question at different dates (these pictures are generated from the committed store by `web/timeline.py`):
+
+**Early 2024:** only revision 1 of the procedure exists.
+![2024-06-01](docs/img/timeline-final_inspection-sampling-2024-06-01.svg)
+
+**March 2026:** revision 3 of the procedure now says AQL 0.65; the work instruction is still in force but overruled.
+![2026-03-01](docs/img/timeline-final_inspection-sampling-2026-03-01.svg)
+
+**Equal authority:** two customer requirements disagree, so Supersede says `unresolved` instead of picking one.
+![supplier audit frequency, unresolved](docs/img/timeline-supplier_audit-frequency-2024-12-01.svg)
+
+**A mistyped date** (2052) is drawn and flagged, not trusted; the answer comes from the revision that is really in force.
+![head bolt torque with a date problem](docs/img/timeline-fastening-head_bolt_torque-2025-10-01.svg)
 
 ## Use case
 
@@ -110,7 +131,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 143 tests (142 without an API key: one live test is skipped)
+python -m pytest -q                          # 160 tests (159 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -122,8 +143,9 @@ python eval/run_eval.py                      # 19 questions: Supersede vs a naiv
   `current_answer`, `find_contradictions`, an equal-authority conflict reported as `unresolved`, and
   `revision_history`. Offline; add `--pause` to slow it down, or `--llm` (needs the `llm` extra and
   `ANTHROPIC_API_KEY`) to have a model phrase the first answer in one sentence from the tool's JSON.
-* `python web/app.py` serves a read-only page over the committed store (standard library only, no keys, no writes).
-  It ships as a Docker image; hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
+* `python web/app.py` serves a read-only page over the committed store (standard library only, no keys, no writes):
+  ask a question, or pick one and **drag the date slider** to watch the timeline and the answer change. It ships as a
+  Docker image; hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
 * `python examples/agent_demo.py` lets a Claude model use the MCP server with no script (needs
   `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`; it sends the questions and fictional tool results to the API).
   A verbatim recorded run is in [docs/agent_transcript.md](docs/agent_transcript.md), including one place where the

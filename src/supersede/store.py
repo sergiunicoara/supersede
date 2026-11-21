@@ -273,6 +273,39 @@ class Store:
                 ended.add(e["o"])
         return {rid for rid, d in eff.items() if d is not None and d <= day and rid not in ended}
 
+    def timeline(self, subject: str, predicate: str) -> list[dict[str, Any]]:
+        """Every fact stated about (subject, predicate), with when its revision takes effect and when it ends.
+
+        `starts` is the revision's effective date (None if blank or unreadable). `ends` is the earliest valid effective
+        date of a revision that supersedes it (None if nothing does, or if the successor has no usable date).
+        Sorted by document, then date. Used to draw the timeline; it does not decide what is in force
+        (`in_force()` and `answer()` do).
+        """
+        facts = self._run(
+            "MATCH (d:Doc)-[:HAS_REV]->(r:Rev)-[:ASSERTS]->(f:Fact) WHERE f.subject = $s AND f.predicate = $p "
+            "RETURN f.fid AS fact, f.value AS value, r.id AS rev, r.effective AS effective, d.id AS doc, "
+            "d.authority AS authority ORDER BY doc, effective, rev",
+            {"s": subject, "p": predicate},
+        )
+        eff = {r["id"]: r["eff"] for r in self._run("MATCH (r:Rev) RETURN r.id AS id, r.effective AS eff")}
+        successors: dict[str, list[str]] = {}
+        for e in self._run("MATCH (n:Rev)-[:SUPERSEDES]->(o:Rev) RETURN n.id AS n, o.id AS o"):
+            successors.setdefault(e["o"], []).append(e["n"])
+        out = []
+        for f in facts:
+            ends = sorted(str(d) for d in (self._day(eff.get(n)) for n in successors.get(f["rev"], [])) if d)
+            out.append({**f, "starts": str(self._day(f["effective"])) if self._day(f["effective"]) else None,
+                        "ends": ends[0] if ends else None, "superseded_by": sorted(successors.get(f["rev"], []))})
+        return out
+
+    def topics(self) -> list[dict[str, str]]:
+        """The (subject, predicate, description) topics, for pickers and for ask(); empty if there are none."""
+        try:
+            return self._run("MATCH (t:Topic) RETURN t.subject AS subject, t.predicate AS predicate, "
+                             "t.description AS description ORDER BY subject, predicate")
+        except Exception:
+            return []
+
     def current_facts(self, subject: str, predicate: str) -> list[dict[str, Any]]:
         return self._run(
             "MATCH (d:Doc)-[:HAS_REV]->(r:Rev)-[:ASSERTS]->(f:Fact) "

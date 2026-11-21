@@ -130,6 +130,19 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `timeline-visual` PR (something to look at).**
+
+- `web/timeline.py` draws, for any question, every document's revisions as bars on a calendar (colour = authority, gold
+  outline = the value in force on the chosen date, red dashes = an equal-authority tie, tags for stale sources and date
+  problems) as a standalone SVG computed from the real store. The web page has a date slider that redraws it; five real
+  frames are committed under `docs/img/` and shown in the README, and the script's capture steps use it.
+- New `Store.timeline()` and `Store.topics()`; new endpoints `/api/keys`, `/api/timeline.json`, `/api/timeline.svg`
+  (validated input, strict CSP, escaped text; a hostile value is tested). 17 new tests; suite 160 (159 without a key).
+- I checked the frames in a browser. That found two real mistakes, now fixed and tested: an unresolved tie outlined
+  lower-authority sources that were not part of the tie, and the date label overlapped the axis.
+
+---
+
 **Update after the `polish` PR (a skeptical-judge read of the README and submission).**
 
 - **Fixed factual errors found by the read:** both files said all data was fictional and used no third-party
