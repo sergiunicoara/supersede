@@ -1,0 +1,19 @@
+# FICTIONAL. r1's effective date was typed with a transposed year (2052 for 2025).
+# r2 no longer requires thread locker on the head bolts.
+id: QP-22
+title: Fastening and torque procedure
+kind: controlled procedure
+authority: 3
+revisions:
+  - rev: 1
+    effective: "2052-01-15"
+    facts:
+      - {id: F-QP22-1-1, subject: fastening, predicate: head_bolt_torque, value: "45 Nm"}
+      - {id: F-QP22-1-2, subject: fastening, predicate: thread_locker, value: "required"}
+      - {id: F-QP22-1-3, subject: fastening, predicate: cover_bolt_torque, value: "22 Nm"}
+  - rev: 2
+    effective: "2025-09-01"
+    supersedes: 1
+    facts:
+      - {id: F-QP22-2-1, subject: fastening, predicate: head_bolt_torque, value: "48 Nm"}
+      - {id: F-QP22-2-2, subject: fastening, predicate: cover_bolt_torque, value: "24 Nm"}

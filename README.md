@@ -50,14 +50,14 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 32 tests: 26 pass, 6 xfail (known edge cases, see AUDIT.md)
+python -m pytest -q                          # 34 tests: 28 pass, 6 xfail (known edge cases, see AUDIT.md)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
-python eval/run_eval.py                      # 13 questions, Supersede vs a naive baseline
+python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
 
 ## Demo
 
-A scripted agent session over a larger fictional corpus (12 documents, 19 revisions, 34 facts;
+A scripted agent session over a larger fictional corpus (15 documents, 25 revisions, 46 facts;
 the cases are described in [examples/corpus/CASES.md](examples/corpus/CASES.md)). It starts the
 MCP server over stdio, connects as an MCP client, and runs four steps: a naive baseline vs
 `current_answer`, `find_contradictions`, an equal-authority conflict reported as `unresolved`,
@@ -102,7 +102,7 @@ which is the point of the project.
 
 A persistent store you can inspect is committed at
 [`examples/store/supersede-demo.relate/`](examples/store/) (directory mode, built from the
-fictional corpus: 12 documents, 19 revisions, 34 facts). Open it with
+fictional corpus: 15 documents, 25 revisions, 46 facts). Open it with
 `relate.connect(path, read_only=True)` or point the MCP server at it;
 [examples/store/README.md](examples/store/README.md) has the commands and how to regenerate it.
 `demo.relate` from the quick start is a separate local store and is not committed.

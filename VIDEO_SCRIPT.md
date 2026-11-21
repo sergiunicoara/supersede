@@ -1,8 +1,9 @@
 # Demo video script (2:00 maximum)
 
 All numbers below come from real runs of `examples/demo_session.py` and `eval/run_eval.py` on the
-fictional corpus: 12 documents, 19 revisions, 34 facts; 13 questions; Supersede 13/13, naive
-baseline 9/13. Re-check them against a fresh run before recording.
+fictional corpus: 15 documents, 25 revisions, 46 facts; 19 questions; Supersede 19/19, naive
+baseline 9/19 (ablations: 15/19 with `SUPERSEDES` only, 11/19 with authority only). Re-check them
+against a fresh run before recording.
 
 The right-hand column is the voiceover, written to be read as is. Record the screen and the voice
 separately, then line them up in the editor.
@@ -19,19 +20,22 @@ separately, then line them up in the editor.
 | **1:10-1:18 Step 3** | STEP 3. `unresolved`, with the two candidates `500 parts` and `400 parts`. | Two work instructions of equal authority disagree. Supersede says unresolved, and does not guess. |
 | **1:18-1:26 Step 4** | STEP 4. `QP-07-r3 replaced QP-07-r2, then QP-07-r1`, then `'5 years'`. | Finally, revision history: revision three replaced two, then one. Only the newest counts. |
 | **1:26-1:35 Demo, wrap** | Final eval line appears; hold on it. | Same documents, same question. The difference is the graph structure. |
-| **1:35-1:50 Result** | The eval line: `Supersede 13/13` vs `naive baseline 9/13`. Optionally cut to the `run_eval.py` table. | On thirteen questions over twelve fictional documents, Supersede answers all thirteen correctly. The naive baseline gets nine. It fails when a lower-authority source is newer, and when sources conflict. Real documents will be messier. |
+| **1:35-1:50 Result** | The eval line: `Supersede 19/19` vs `naive baseline 9/19`. Optionally cut to the `run_eval.py` table. | On nineteen questions over fifteen fictional documents, Supersede answers all nineteen correctly. The naive baseline gets nine. It fails when a lower-authority source is newer, when sources conflict, and when dates are missing or wrong. Real documents will be messier. |
 | **1:50-2:00 Close** | Repo page `github.com/sergiunicoara/supersede`, MIT license visible, "Built with Relate by Neo4j" as a text line. | Supersede is open source, MIT licensed, at github dot com slash sergiunicoara slash supersede. Built with Relate by Neo4j. |
 
 ## Notes on the claims
 
-* "Fails when a lower-authority source is newer": true for 2 of the 13 questions (retention period,
-  film thickness). "And when sources conflict": the 2 equal-authority questions, which the baseline
-  cannot pass by design because it never reports a disagreement. Both are explained in
-  `eval/run_eval.py`.
-* The baseline gets the stale, agreed, unknown and chain questions right (9 of 13). Do not imply it
+* The baseline misses 10 of the 19 questions: "a lower-authority source is newer" (2: retention
+  period, film thickness); "sources conflict" (2 equal-authority questions, which no baseline can
+  pass because none reports a disagreement); "dates are missing or wrong" (6: a blank date, a 2052
+  typo, and a dropped requirement). All are explained in `eval/run_eval.py` and `CASES.md`.
+* The baseline gets the stale, agreed, unknown and chain questions right (9 of 19). Do not imply it
   fails everywhere; the script does not.
-* Step 1 shows a baseline answer that is newer but outranked, not a superseded one: in this corpus
-  newest-wins never returns a superseded revision. Do not call the baseline value "stale" on screen.
+* Step 1 shows a baseline answer that is newer but outranked, not a superseded one. The date cases
+  (`QP-22`, `WI-31`) are where newest-wins *does* return a superseded revision, but the demo
+  session does not show them. Do not call step 1's baseline value "stale" on screen.
+* The six date-case questions were designed to separate dates from `SUPERSEDES`; do not present
+  them as typical of real documents.
 
 ## Recording checklist
 
@@ -82,5 +86,5 @@ Keep step 1, step 3 and the result: they carry the story.
 
 **Before upload**
 - [ ] Final length at or under 2:00 (hard limit).
-- [ ] The numbers on screen match the spoken numbers: 13/13 and 9/13, twelve documents.
+- [ ] The numbers on screen match the spoken numbers: 19/19 and 9/19, fifteen documents.
 - [ ] No API keys, usernames or paths visible in the terminal.

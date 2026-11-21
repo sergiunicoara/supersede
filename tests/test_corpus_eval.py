@@ -26,7 +26,7 @@ def loaded() -> Store:
 def test_corpus_loads():
     docs = read_corpus()
     d, r, f = counts(docs)
-    assert (d, r, f) == (12, 19, 34)
+    assert (d, r, f) == (15, 25, 46)
     assert {doc["authority"] for doc in docs} == {1, 2, 3, 4}
     assert any(len(doc["revisions"]) == 3 for doc in docs)
     s = loaded()
@@ -37,7 +37,8 @@ def test_corpus_loads():
 
 def test_every_case_in_cases_md_has_a_question():
     cases = set(re.findall(r"^## Case `(\w+)`", CASES_MD.read_text(encoding="utf-8"), re.M))
-    assert cases == {"stale", "authority", "unresolved", "agreed", "unknown", "chain"}
+    assert cases == {"stale", "authority", "unresolved", "agreed", "unknown", "chain",
+                     "missing_date", "date_error", "withdrawn"}
     used = {q["case"] for q in QUESTIONS}
     assert cases <= used, f"cases without a question: {cases - used}"
     assert used <= cases, f"questions with an undocumented case: {used - cases}"
@@ -71,6 +72,33 @@ def test_only_current_revisions_conflict():
     assert stale_ids
     for c in s.contradictions():
         assert c.left_fact not in stale_ids and c.right_fact not in stale_ids
+
+
+def test_ablations_separate_what_each_part_of_the_graph_buys():
+    """Pins the designed behavior of the three baselines per case type (value-only scoring)."""
+    rows = run_eval.evaluate()
+    per: dict[str, dict[str, int]] = {}
+    for x in rows:
+        c = per.setdefault(x["q"]["case"], {"n": 0, "newest": 0, "supersession": 0, "authority": 0})
+        c["n"] += 1
+        c["newest"] += x["base_ok"]
+        c["supersession"] += x["sup_ok"]
+        c["authority"] += x["aut_ok"]
+    # dates that are missing, wrong, or irrelevant: only following SUPERSEDES helps
+    for case in ("missing_date", "date_error", "withdrawn"):
+        assert per[case]["supersession"] == per[case]["n"], case
+        assert per[case]["newest"] == 0 and per[case]["authority"] == 0, case
+    # conflicting sources: authority helps, supersession alone does not
+    assert per["authority"]["authority"] == per["authority"]["n"]
+    assert per["authority"]["supersession"] < per["authority"]["n"]
+    # equal-authority ties: no baseline can report a disagreement
+    assert per["unresolved"]["newest"] == per["unresolved"]["supersession"] == per["unresolved"]["authority"] == 0
+
+
+def test_blank_effective_date_loads_and_is_a_string():
+    docs = read_corpus()
+    wi31 = next(d for d in docs if d["id"] == "WI-31")
+    assert [r["effective"] for r in wi31["revisions"]] == ["2024-11-04", ""]
 
 
 def test_three_revision_history():

@@ -17,3 +17,10 @@ questions:
   - {id: q11, case: unknown, subject: final_inspection, predicate: paint_color, expected_status: unknown}
   - {id: q12, case: chain, subject: final_inspection, predicate: record_retention, expected_status: agreed, expected_value: "5 years", expected_source: QP-07-r3}
   - {id: q13, case: chain, subject: supplier_audit, predicate: on_site_notice_days, expected_status: agreed, expected_value: "7", expected_source: QP-18-r3}
+  # cases where supersession and effective dates disagree (see examples/corpus/CASES.md)
+  - {id: q14, case: missing_date, subject: furnace_loading, predicate: preheat_minutes, expected_status: agreed, expected_value: "30", expected_source: WI-31-r2}
+  - {id: q15, case: missing_date, subject: furnace_loading, predicate: max_basket_kg, expected_status: agreed, expected_value: "300", expected_source: WI-31-r2}
+  - {id: q16, case: date_error, subject: fastening, predicate: head_bolt_torque, expected_status: agreed, expected_value: "48 Nm", expected_source: QP-22-r2}
+  - {id: q17, case: date_error, subject: fastening, predicate: cover_bolt_torque, expected_status: agreed, expected_value: "24 Nm", expected_source: QP-22-r2}
+  - {id: q18, case: withdrawn, subject: leak_test, predicate: retest_allowed, expected_status: unknown}
+  - {id: q19, case: withdrawn, subject: fastening, predicate: thread_locker, expected_status: unknown}
