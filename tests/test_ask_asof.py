@@ -170,3 +170,8 @@ def test_the_new_tools_work_over_mcp(tmp_path):
     assert (b["status"], b["value"], b["source"]) == ("resolved", "AQL 1.0", "QP-07-r2")
     w = _call(db, "date_warnings", {})
     assert {x["issue"] for x in w} == {"future_date", "dated_before_predecessor", "missing_date"}
+
+
+def test_ask_rejects_a_bad_date_even_when_nothing_matches():
+    with pytest.raises(ValueError, match="as_of"):
+        corpus().ask("What colour are the delivery trucks?", as_of="2025-13-40")

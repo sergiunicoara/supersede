@@ -101,10 +101,17 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 80 tests (79 without an API key: one live test is skipped)
+python -m pytest -q                          # 104 tests (103 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
+
+### A web page
+
+`python web/app.py` serves a read-only page over the committed fictional store (standard library only,
+no keys, no writes): type a question, optionally pick a date, see the value in force, the reason,
+what it overruled, stale sources and date problems. It ships as a Docker image (`Dockerfile`); how to
+host it on Hugging Face Spaces or elsewhere is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ### A real agent
 

@@ -1,0 +1,16 @@
+.git
+.venv
+.github
+__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+*.relate
+!examples/store/supersede-demo.relate
+demo_terminal_capture.mp4
+tests
+eval
+docs
+AUDIT.md
+SUBMISSION.md
+VIDEO_SCRIPT.md

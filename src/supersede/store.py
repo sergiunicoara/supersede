@@ -363,6 +363,8 @@ class Store:
         and dates all apply. The answer also says if the revisions it rests on were written from a
         source that has since been superseded.
         """
+        if as_of is not None and self._day(as_of) is None:
+            raise ValueError(f"as_of must be a date like 2025-07-01, got {as_of!r}")
         terms = [t for t in re.findall(r"[a-z0-9]+", question.lower()) if t not in self._STOP]
         if not terms:
             return {"question": question, "status": "no_match", "reason": "the question has no searchable words"}
