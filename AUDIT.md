@@ -130,6 +130,22 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the real-documents step (audit suggestion 5).**
+
+- Two real federal regulation sections (48 CFR 13.000 and 3.1004) at three dated versions each, from the
+  public eCFR (public domain), are in `examples/real/` with provenance and limits. A research agent
+  proposed them; **I re-fetched the text from the eCFR API myself** (lengths and every dollar figure
+  matched) and checked that the versions it skipped change wording only.
+- Extraction on that real text, blind first run: 13 of 15 facts (precision 0.87, recall 0.87), the
+  two misses one phrase boundary. After clarifying the vocabulary (informed by that run) three runs
+  scored 15 of 15, and the graph built from extracted facts matched the gold graph for all 15 (key, date)
+  pairs. Offline tests pin the real history. Limits: 6 documents, procurement not quality
+  manufacturing, first-version dates are the start of the eCFR window.
+- The ingestion, extraction and eval code now ignore a `README.md` in a document folder.
+- Suite: 126 tests (125 pass without an API key).
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |

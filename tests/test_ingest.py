@@ -97,3 +97,9 @@ def test_cli_builds_a_store_and_refuses_an_existing_path(tmp_path):
     s = Store(str(db), read_only=True)
     assert s.answer("packaging", "units_per_box")["value"] == "24"
     s.close()
+
+
+def test_a_readme_in_a_document_folder_is_not_a_document(tmp_path):
+    (tmp_path / "a.md").write_text(HEADER + "{{k.p = v}}", encoding="utf-8")
+    (tmp_path / "README.md").write_text("About this folder, not a document.", encoding="utf-8")
+    assert ingest_directory(Store(), tmp_path) == (1, 1, 1)

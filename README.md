@@ -101,7 +101,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 104 tests (103 without an API key: one live test is skipped)
+python -m pytest -q                          # 126 tests (125 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -216,6 +216,15 @@ scored precision 0.67 and recall 0.67, and every miss was a value format (`2.5 b
 model never extracted a historical or rejected value and never invented a fact, and the guard rails
 rejected nothing. This is a small, author-written set, so treat it as evidence that the approach
 works, not as a benchmark.
+
+It also works on **real text**: [examples/real](examples/real/) holds two sections of the US Federal
+Acquisition Regulation at three dated versions each, from the public eCFR (public domain), in which
+dollar thresholds really changed ($5.5M, $6M, $7.5M and $7M, $7.5M, $9M). On the first, blind run
+the model got 13 of 15 gold facts (the two misses were `120 days or more` against `120 days`; no
+wrong fact). After I clarified the value format in the vocabulary (informed by that run), three runs
+got 15 of 15, and the graph built from the extracted facts gave the same answer as the gold graph for
+every one of the 15 (key, date) pairs, so supersession and as-of answers over a real history hold.
+It is only 6 documents on procurement compliance, not quality manufacturing.
 
 ## Where the data lives
 

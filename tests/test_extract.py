@@ -10,7 +10,7 @@ import pytest
 from supersede.extract import (
     annotate, extract_directory, extract_facts, load_vocabulary, validate,
 )
-from supersede.ingest import ingest_directory, parse
+from supersede.ingest import document_files, ingest_directory, parse
 from supersede.store import Store
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -168,7 +168,7 @@ def test_gold_matches_the_example_documents_and_gold_values_are_in_the_text():
     from run_extraction_eval import _norm
 
     gold = json.loads((RAW / "gold.json").read_text(encoding="utf-8"))
-    assert set(gold) == {p.name for p in RAW.glob("*.md")}
+    assert set(gold) == {p.name for p in document_files(RAW)}
     for name, facts in gold.items():
         body = _norm((RAW / name).read_text(encoding="utf-8"))
         assert all(k in VOCAB and _norm(v) in body for k, v in facts.items()), name

@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .ingest import parse, split_document
+from .ingest import document_files, parse, split_document
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
 MAX_VALUE_CHARS = 120
@@ -209,7 +209,7 @@ def annotate(document: str, extraction: Extraction, source: str = "<text>") -> s
 def extract_directory(raw_dir: str | os.PathLike, vocabulary: dict[str, str], out_dir: str | os.PathLike,
                       client: Any = None, model: str = DEFAULT_MODEL) -> dict[str, Extraction]:
     """Write a reviewable annotated copy of every ``*.md`` in `raw_dir` into `out_dir` (must not exist)."""
-    files = sorted(Path(raw_dir).glob("*.md"))
+    files = document_files(raw_dir)
     if not files:
         raise ValueError(f"no *.md documents found in {raw_dir}")
     if Path(out_dir).exists():

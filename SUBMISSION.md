@@ -230,7 +230,7 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 80 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+* The suite has 126 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
   chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
   a store byte-identical, and one that runs the demo end to end over MCP.
 
@@ -297,6 +297,27 @@ A recorded run (`docs/agent_transcript.md`, verbatim) shows it declining to pick
 equal-authority sources, using `answer_as_of` for a past date, flagging a stale source, and
 saying it does not know when no topic matches. In its last answer it misreads one tool result,
 which the file shows as is.
+
+### Real regulation text
+
+The corpus above is fictional, so I also ran the pipeline on **real** text: two sections of the US
+Federal Acquisition Regulation (48 CFR 13.000 and 3.1004) at three dated versions each, taken from the
+public eCFR (US government work, public domain; `examples/real/`). In them dollar thresholds really
+changed ($7M, $7.5M, $9M and $5.5M, $6M, $7.5M). I fetched the text myself from the eCFR API, checked
+that the intermediate versions I left out change wording but no figure, and wrote the expected facts
+before any model ran.
+
+| Run | Facts right (of 15) | Graph answers identical to gold, per (key, date) |
+|---|---|---|
+| 1: first, blind | 13 (precision 0.87, recall 0.87) | 13 of 15 |
+| 2 to 4: after clarifying the value format | 15, 15, 15 | 15 of 15, three times |
+
+The two misses in run 1 were one phrase boundary (`120 days or more` instead of `120 days`), not a
+wrong fact; I then clarified the vocabulary, so runs 2 to 4 are informed by run 1. The guard rails
+rejected nothing, and no invented value appeared. Offline tests with the gold facts pin the real
+history: today's threshold, the threshold on past dates, and a requirement that never changed. Limits:
+6 documents, procurement compliance rather than quality manufacturing, and the earliest date of each
+section is the start of the eCFR's history window, not the original effective date.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always

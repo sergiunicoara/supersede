@@ -81,6 +81,11 @@ def parse(text: str, source: str = "<text>") -> Revision:
                     source, derived)
 
 
+def document_files(directory: str | os.PathLike) -> list[Path]:
+    """The ``*.md`` documents in a folder, in order. A README.md describes the folder; it is not a document."""
+    return [p for p in sorted(Path(directory).glob("*.md")) if p.name.lower() != "readme.md"]
+
+
 def split_document(text: str, source: str = "<text>") -> tuple[str, str]:
     """Split a document into (header block including both '---' lines, body)."""
     lines = text.lstrip("\ufeff").replace("\r\n", "\n").split("\n")
@@ -99,7 +104,7 @@ def ingest_directory(store: Store, directory: str | os.PathLike,
 
     `topics` ({"subject.predicate": "description"}) makes the store searchable with Store.ask().
     """
-    revisions = [parse(p.read_text(encoding="utf-8"), p.name) for p in sorted(Path(directory).glob("*.md"))]
+    revisions = [parse(p.read_text(encoding="utf-8"), p.name) for p in document_files(directory)]
     if not revisions:
         raise ValueError(f"no *.md documents found in {directory}")
     return load_revisions(store, revisions, topics)
