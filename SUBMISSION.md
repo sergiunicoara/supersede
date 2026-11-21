@@ -1,8 +1,5 @@
 # Devpost submission draft: Supersede
 
-> Draft for pasting into Devpost. Items marked **[CONFIRM]** are your decisions. This file also ends
-> with a judging-criteria note that is for you, not for Devpost: delete it before pasting.
-
 ## 1. Project name and tagline
 
 **Supersede**
@@ -187,7 +184,7 @@ corpora.
 
 ## 8. What's next
 
-These are plans, not features in the repo today. **[CONFIRM]** that you want to commit to them.
+These are plans, not features in the repo today.
 
 * **Ingestion.** Today facts and `SUPERSEDES` links are written through the `Store` API; there is no
   document parsing. Next would be extracting facts and revision links from documents.
@@ -220,15 +217,3 @@ These are plans, not features in the repo today. **[CONFIRM]** that you want to 
   Claude (Anthropic). I directed the design and am responsible for the result.
 * **Third-party:** Relate (`relate-db` 1.2.0, Apache-2.0) and the MCP Python SDK. Dev only: pytest
   and PyYAML. Optional (`--llm` in the demo only): the Anthropic Python SDK.
-
----
-
-## Judging-criteria note (for you; delete before pasting)
-
-| Criterion | Supported by | Gap |
-|---|---|---|
-| **Creativity** | Section 3, "What is different from plain vector memory": revision chains and authority as graph structure, conflicts only between current revisions, honest `unresolved` | Argued against vector memory only, as requested; nothing is claimed about other entries |
-| **Usefulness** | Section 2, "Who it is for": quality and compliance teams and agents over revised procedures; Section 3 worked example | Evidence is on designed fictional cases. There is no ingestion (Section 8), so facts and links are entered through the `Store` API today, not extracted from documents |
-| **Completeness** | Sections 3, 5, 7: four working MCP tools, persistent store, corpus, 13-question eval, baseline, scripted demo, 18 tests | The video is a script, not a recorded video; the recording is still to do |
-| **Clarity** | Sections 3, 4, 7: plain-language sentence before each query, the measured table, the worked example | Section 7 is the densest part; the baseline scoring notes could be cut to one line if space is tight |
-| **Effective use of connected context** | Sections 4, 7: answers come from traversing Doc -> Rev -> Fact and the `SUPERSEDES` chain with authority; the contradiction join depends on graph structure; persistent mode keeps the history; 13/13 vs 9/13 | The baseline is newest-date-wins, not a vector-retrieval baseline, so Section 7 does not show a vector-search comparison. Say "naive baseline", as written, not "vector baseline" |
