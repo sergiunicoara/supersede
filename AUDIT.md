@@ -74,7 +74,7 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 | D10 | the "demo video shows" sentence is reworded; capabilities list was added earlier |
 | D11 | README follows the overview template: Use case / How it uses Relate (Mode, Why this mode, What the graph models) / Setup and run / Where the data lives; Disclosures unchanged word for word |
 | D12 | `supersede.ingest` loads annotated Markdown (header plus inline `{{subject.predicate = value}}`); deterministic, no new dependency; **it does not extract facts from unannotated text** |
-| D15 | see the CI results recorded in the PR; locally only Windows / Python 3.11 was run |
+| D15 | a GitHub Actions matrix (`.github/workflows/ci.yml`) ran on **Ubuntu, macOS and Windows with Python 3.10 and 3.12**: install, tests (52 passed), eval (Supersede 19/19 vs 9/19), the demo session and ingestion all succeeded in all 6 jobs (run 44913258181). Not covered: Python 3.11 and 3.13 on CI (3.11 was run locally on Windows), and Apple-silicon vs Intel runners |
 
 ---
 

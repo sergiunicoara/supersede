@@ -60,7 +60,8 @@ own MCP server with domain tools instead.
 
 ## Setup and run
 
-Requires Python 3.10 or later. No network access is needed after `pip install`.
+Requires Python 3.10 or later. No network access is needed after `pip install`. CI runs the tests,
+the eval, the demo and the ingestion on Linux, macOS and Windows with Python 3.10 and 3.12.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
