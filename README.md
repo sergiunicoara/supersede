@@ -4,6 +4,8 @@
 
 Built for the Relate by Neo4j Hackathon on [Relate](https://relatedb.ai), the embedded graph database.
 
+**Live demo:** https://supersede-demo.onrender.com (read-only, fictional data; a free instance, so the first visit after idle takes about a minute to wake).
+
 ```
 Q: How long must retained samples be kept?
 naive baseline (newest fact wins):  3 years    (a night-shift note)
@@ -148,7 +150,7 @@ python eval/run_eval.py                      # 19 questions: Supersede vs a naiv
   `ANTHROPIC_API_KEY`) to have a model phrase the first answer in one sentence from the tool's JSON.
 * `python web/app.py` serves a read-only page over the committed store (standard library only, no keys, no writes):
   ask a question, or pick one and **drag the date slider** to watch the timeline and the answer change. It ships as a
-  Docker image; hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
+  Docker image; it is live at https://supersede-demo.onrender.com, and hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
 * `python examples/agent_demo.py` lets a Claude model use the MCP server with no script (needs
   `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`; it sends the questions and fictional tool results to the API).
   A verbatim recorded run is in [docs/agent_transcript.md](docs/agent_transcript.md), including one place where the

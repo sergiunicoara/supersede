@@ -11,27 +11,18 @@ files unchanged after requests); a first request answers in well under a second.
 python web/app.py            # http://127.0.0.1:7860
 ```
 
-## Hugging Face Spaces (recommended; free for a small public app)
+## Render (used for the live demo; free web service)
 
-You need a Hugging Face account. Nothing below needs a key from this project.
+The live demo, https://supersede-demo.onrender.com, is a free Render web service built from this repository's
+`Dockerfile`: **New > Web Service > Public Git Repository**, the repo URL, language Docker, branch `main`, and the
+**Free** instance type (check it: the default is a paid plan). Nothing else to set; no keys. A free instance spins down
+after 15 minutes without traffic and takes about a minute to wake, and all free services in a Render workspace share
+750 instance hours a month. Open it shortly before judging so it is awake.
 
-1. Assemble a folder that contains exactly what the Space needs:
-   ```bash
-   python web/make_space.py ../supersede-space
-   ```
-2. On https://huggingface.co/new-space choose **SDK: Docker**, visibility **Public**, name it
-   `supersede`.
-3. Push the folder to the Space:
-   ```bash
-   cd ../supersede-space
-   git init && git add . && git commit -m "Supersede demo"
-   git remote add space https://huggingface.co/spaces/<your-user>/supersede
-   git push space main
-   ```
-   (Hugging Face asks for your username and an access token with write permission when you push.)
-4. Wait for the build (a few minutes). Open the Space URL, ask a question, and open it again on the
-   first day of judging (12 Dec) in case a free Space has gone to sleep. Put the URL in the Devpost
-   submission and the README.
+## Hugging Face Spaces (not used)
+
+The Docker SDK is a paid feature on a free Hugging Face account, and the free tier only runs Gradio apps, so the demo
+is not hosted there. `web/make_space.py` still assembles a Docker-SDK Space folder if you have a plan that allows it.
 
 ## Any other Docker host (Render, Fly.io, ...)
 
@@ -46,4 +37,4 @@ docker run -p 7860:7860 supersede-demo
 
 * Keep it fictional data only (the contest rules say not to use sensitive or real data).
 * Keep it read-only, with no secrets in the image. The `ask` path is offline, so nothing here needs a key.
-* It must stay up from submission until judging ends (16 Dec). Check it the day you submit.
+* It must stay up from submission until judging ends (16 Dec). Check it the day you submit, and again on 12 Dec.

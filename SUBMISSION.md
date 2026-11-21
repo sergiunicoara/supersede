@@ -144,6 +144,7 @@ python examples/demo_session.py                  # a naive baseline vs Supersede
 python examples/ask.py "How long must retained samples be kept?"
 python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01
 python web/app.py                                # then open http://127.0.0.1:7860 and drag the date slider
+# or, with nothing to install: https://supersede-demo.onrender.com  (free instance; allow about a minute to wake)
 ```
 
 Requires Python 3.10 or later; nothing needs the network after `pip install`. The persistent Relate store is
