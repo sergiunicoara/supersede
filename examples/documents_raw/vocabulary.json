@@ -1,0 +1,12 @@
+{
+  "packaging.units_per_box": "how many parts go in one box; the value is the number only, e.g. 36",
+  "packaging.label_language": "the language or languages of the box label",
+  "packaging.seal": "how a box is sealed",
+  "packaging.pallet_layers": "the maximum number of box layers on a pallet; the value is the number only, e.g. 3",
+  "gauge_calibration.interval": "how often gauges are calibrated; the value is the period only, without the word 'every', e.g. 9 months",
+  "gauge_calibration.owner": "who is responsible for calibrating the gauges",
+  "leak_test.pressure_bar": "the test pressure in bar; the value is the number only, e.g. 1.5",
+  "leak_test.hold_seconds": "how many seconds the test pressure is held; the value is the number only, e.g. 10",
+  "cleaning.solvent": "the solvent used to clean fixtures",
+  "cleaning.interval_hours": "the number of hours between cleanings; the value is the number only, e.g. 4"
+}

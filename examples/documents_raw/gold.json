@@ -1,0 +1,35 @@
+{
+  "QP-40_r2.md": {
+    "packaging.units_per_box": "24",
+    "packaging.label_language": "English and German",
+    "packaging.seal": "tamper-evident tape"
+  },
+  "WI-41_r1.md": {
+    "packaging.units_per_box": "20",
+    "packaging.seal": "tamper-evident tape",
+    "packaging.pallet_layers": "5"
+  },
+  "CSR-ORL-01_r1.md": {
+    "packaging.label_language": "English and German",
+    "packaging.pallet_layers": "4"
+  },
+  "QP-11_r2.md": {
+    "gauge_calibration.interval": "6 months",
+    "gauge_calibration.owner": "the metrology lab"
+  },
+  "WI-33_r2.md": {
+    "leak_test.pressure_bar": "2.5",
+    "leak_test.hold_seconds": "30"
+  },
+  "WI-60_r1.md": {
+    "cleaning.solvent": "isopropyl alcohol",
+    "cleaning.interval_hours": "8"
+  },
+  "SN-1103_r1.md": {},
+  "QP-45_r1.md": {
+    "leak_test.pressure_bar": "2.5",
+    "leak_test.hold_seconds": "30",
+    "packaging.units_per_box": "24",
+    "gauge_calibration.owner": "the quality lab"
+  }
+}
