@@ -1,0 +1,2 @@
+# Committed Relate store: keep every file byte-for-byte (no line-ending conversion)
+examples/store/** -text

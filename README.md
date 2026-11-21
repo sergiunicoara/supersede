@@ -43,12 +43,14 @@ agent's own process. The store persists on disk between runs.
 
 ## Quick start
 
+Requires Python 3.10 or later. No network access is needed after `pip install`.
+
 ```bash
-python -m venv .venv && . .venv/bin/activate
+python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 18 tests
+python -m pytest -q                          # 32 tests: 26 pass, 6 xfail (known edge cases, see AUDIT.md)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 13 questions, Supersede vs a naive baseline
 ```
@@ -71,23 +73,39 @@ read from the environment only and is never stored.
 
 ### Use it from an MCP client
 
+MCP hosts start the server from their own working directory, so use **absolute paths** for both
+the Python in this repo's `.venv` and the store. A relative `--db` path silently creates a new,
+empty store in the host's directory.
+
 ```json
 {
   "mcpServers": {
     "supersede": {
-      "command": "python",
-      "args": ["-m", "supersede.mcp_server", "--db", "demo.relate"],
-      "env": { "PYTHONPATH": "src" }
+      "command": "/absolute/path/to/supersede/.venv/bin/python",
+      "args": ["-m", "supersede.mcp_server",
+               "--db", "/absolute/path/to/supersede/examples/store/supersede-demo.relate"]
     }
   }
 }
 ```
+
+On Windows the Python path is `C:\\path\\to\\supersede\\.venv\\Scripts\\python.exe`. After
+`pip install -e .` no `PYTHONPATH` is needed.
 
 Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`.
 
 Relate mode used: **persistent on-disk store** (`--db path`; Relate keeps it as a directory), with
 `:memory:` as the default for tests. Memory-only would lose the revision history between runs,
 which is the point of the project.
+
+## Where the data lives
+
+A persistent store you can inspect is committed at
+[`examples/store/supersede-demo.relate/`](examples/store/) (directory mode, built from the
+fictional corpus: 12 documents, 19 revisions, 34 facts). Open it with
+`relate.connect(path, read_only=True)` or point the MCP server at it;
+[examples/store/README.md](examples/store/README.md) has the commands and how to regenerate it.
+`demo.relate` from the quick start is a separate local store and is not committed.
 
 ## Design notes
 
