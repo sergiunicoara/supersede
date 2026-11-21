@@ -1,0 +1,28 @@
+# Used ONLY to choose Store.MIN_VECTOR_SCORE (see eval/calibrate_vector.py). These questions are not in
+# eval/questions.yaml, so the threshold is not tuned on the evaluation questions.
+on_topic:
+  - {question: "How long is the retention time for samples we hold back?", key: retained_sample.retention_period}
+  - {question: "How many hours until we tell the customer about a problem?", key: customer_notification.hours}
+  - {question: "How regularly are our suppliers audited?", key: supplier_audit.frequency}
+  - {question: "What coating thickness do we apply on the paint line?", key: paint_line.film_thickness_um}
+  - {question: "What inspection sampling plan do we use at the end?", key: final_inspection.sampling}
+  - {question: "Which interval do we recalibrate gauges at?", key: gauge_calibration.interval}
+  - {question: "How many parts before swapping tools in the machining cell?", key: machining_cell.tool_change_interval}
+  - {question: "What is our goal for the changeover on line 3?", key: line_3.changeover_target_min}
+  - {question: "What is the maximum weight per furnace basket in kilograms?", key: furnace_loading.max_basket_kg}
+  - {question: "How tightly are the cylinder head bolts tightened?", key: fastening.head_bolt_torque}
+  - {question: "Is the retest of a failed leak test permitted?", key: leak_test.retest_allowed}
+  - {question: "What pressure do we use for leak testing?", key: leak_test.pressure_bar}
+off_topic:
+  - "What time does the cafeteria open?"
+  - "Who approves vacation requests?"
+  - "How do I reset my laptop password?"
+  - "Which forklift is assigned to the loading dock?"
+  - "When is the next fire drill?"
+  - "What is the company dress code?"
+  - "Where do I park my car?"
+  - "What is the weather forecast for tomorrow?"
+  - "Who won the football match last night?"
+  - "How many employees work in the plant?"
+  - "What is the Wi-Fi password?"
+  - "Can I bring a visitor to the canteen?"

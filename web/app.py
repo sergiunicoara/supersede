@@ -73,7 +73,7 @@ ul{margin:.4em 0;padding-left:1.2em}footer{margin:24px 0;color:var(--mut);font-s
 <p class="sub" style="margin:0 0 4px">Pick a question and drag the date. Each bar is a revision, colour is authority, the gold outline is the value in force that day.</p>
 <div class="tlbar"><select id="key" aria-label="Question"></select><input id="slider" type="range" min="0" max="1" value="0" aria-label="Date"><span id="dlabel" class="tag"></span></div>
 <img id="tl" alt="Timeline of the revisions in force" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff">
-<footer>All data is fictional. Read-only; nothing you type is stored. Retrieval is Relate's full-text index; the answer comes from the graph
+<footer>All data is fictional. Read-only; nothing you type is stored. Retrieval is Relate's full-text and vector indexes; the answer comes from the graph
 (supersession, authority, ties, dates). Source: <a href="https://github.com/sergiunicoara/supersede">github.com/sergiunicoara/supersede</a>.</footer>
 <script>
 const $=id=>document.getElementById(id);

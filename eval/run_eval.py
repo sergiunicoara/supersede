@@ -36,6 +36,7 @@ sys.path.insert(0, str(HERE.parent / "src"))
 
 import baseline  # noqa: E402
 from load_corpus import CORPUS_DIR, counts, load_docs, read_corpus, read_topics  # noqa: E402
+from supersede.embed import STOPWORDS  # noqa: E402
 from supersede.store import Store  # noqa: E402
 
 QUESTIONS = HERE / "questions.yaml"
@@ -111,7 +112,7 @@ def _loaded(corpus_dir) -> tuple[list[dict], Store]:
 
 def _name_overlap_key(question: str, keys: list[str]) -> str | None:
     """Naive retrieval: the key whose NAME shares the most words with the question (no index, no descriptions)."""
-    words = {w for w in re.findall(r"[a-z0-9]+", question.lower()) if w not in Store._STOP}
+    words = {w for w in re.findall(r"[a-z0-9]+", question.lower()) if w not in STOPWORDS}
     best, best_n = None, 0
     for k in sorted(keys):
         n = len(words & set(re.split(r"[_.]", k)))
@@ -130,16 +131,16 @@ def _baseline_value_ok(q: dict, key: str | None, docs: list[dict]) -> bool:
     return check_baseline(q, baseline.answer(docs, subject, predicate))
 
 
-def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
+def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS, section="retrieval", mode="hybrid") -> list[dict]:
     """Plain-language questions through ask(). Compares Relate full-text retrieval + graph reasoning with
     (a) the same retrieval answered by newest date and (b) name-overlap retrieval answered by newest date."""
-    items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get("retrieval", [])
+    items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get(section, [])
     docs, store = _loaded(corpus_dir)
     keys = sorted(read_topics(corpus_dir))
     rows = []
     try:
         for q in items:
-            res = store.ask(q["question"])
+            res = store.ask(q["question"], retrieval=mode)
             m = res.get("matched")
             key = f"{m['subject']}.{m['predicate']}" if m else None
             ans = res.get("answer", {})

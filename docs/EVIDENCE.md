@@ -52,7 +52,7 @@ Deterministic, in the same `run_eval.py`.
 
 | 23 plain-language questions (4 off-topic) | Right topic first | Correct answer end to end |
 |---|---|---|
-| **Supersede `ask()`** (Relate full-text + graph) | **23/23** | **23/23** |
+| **Supersede `ask()`** (Relate hybrid retrieval + graph) | **23/23** | **23/23** |
 | same retrieval, answered by newest date | 23/23 | 13/23 |
 | name-overlap retrieval, answered by newest date | 17/23 | 10/23 |
 
@@ -60,6 +60,23 @@ Retrieval alone is not the point: the same retrieval with a newest-date answer g
 22/23: one off-topic question ("How many holidays do employees get?") matched a topic only through the generic
 words "how many". I then added "many" and "much" to the stop words, a change informed by that miss, so 23/23 is not
 blind.
+
+**Full-text vs vector vs hybrid** (`python eval/compare_retrieval.py`; exact answers required). The second set,
+`retrieval_variants`, is 18 rewordings (word forms, synonyms, typos) written before the three modes were run on it.
+The vector threshold (`MIN_VECTOR_SCORE = 0.70`) was chosen on a third, separate set (`eval/calibration.yaml`,
+`python eval/calibrate_vector.py`): all 12 on-topic questions score 0.72 or more and all 12 off-topic ones 0.69 or
+less, a thin margin. I had seen two of the off-topic scores from the evaluation set before writing that set.
+
+| Retrieval | `retrieval` (23) | `retrieval_variants` (18) | total (41) |
+|---|---|---|---|
+| full-text only (BM25) | 23 | 15 | 38 |
+| vector only (hashing embedder) | 21 | 18 | 39 |
+| **hybrid (default, reciprocal rank fusion)** | **23** | **16** | **39** |
+
+Read it modestly: the gaps are one or two questions. Full-text misses word forms ("calibrate" against
+"calibration", "thick" against "thickness"); the vector index misses a true synonym ("bake" against "cure"), which a
+hashing embedder cannot know. Hybrid is never worse than full-text on either set, ties vector overall, and its two
+misses are different from vector's. A trained embedding model would help with synonyms and is not included.
 
 13 "what was in force on this date" questions, including the mistyped-date and missing-date documents:
 **Supersede 13/13** against 11/13 for "the newest fact dated on or before that day". Effective dates are taken at

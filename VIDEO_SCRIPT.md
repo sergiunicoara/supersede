@@ -13,7 +13,7 @@ Record the screen and the voice separately, then line them up in the editor.
 | Time | On screen | What I say |
 |---|---|---|
 | **0:00-0:12 Hook** | Title card "Supersede", then the README title. | Agents that read documents quote stale or conflicting facts. A procedure is revised, but the old one stays in memory. Vector memory cannot tell what replaced what. |
-| **0:12-0:32 Idea** | `docs/graph.svg` (documents, revisions, facts, SUPERSEDES, DERIVED_FROM, authority). Highlight each edge as it is named. | Supersede keeps that structure in a graph, on Relate, the embedded graph database: documents, revisions, facts, which revision supersedes which, and each document's authority. Relate's full-text index finds the right topic for a question. Cypher traversals decide which fact is in force. |
+| **0:12-0:32 Idea** | `docs/graph.svg` (documents, revisions, facts, SUPERSEDES, DERIVED_FROM, authority). Highlight each edge as it is named. | Supersede keeps that structure in a graph, on Relate, the embedded graph database: documents, revisions, facts, which revision supersedes which, and each document's authority. Relate's full-text and vector indexes find the right topic for a question. Cypher traversals decide which fact is in force. |
 | **0:32-1:00 Demo, session** | Capture 1: `python examples/demo_session.py --pause 2.5`. Hold on step 1 (baseline `'3 years'` vs Supersede `'10 years'` with the reason), then step 2 winners, step 3 `unresolved`, step 4 history. | A naive baseline takes the newest fact: three years, from a shift note. Supersede answers ten years, from the customer requirement, and says why. It lists real conflicts with a winner by authority, reports an equal-authority conflict as unresolved instead of guessing, and keeps only the newest revision. |
 | **1:00-1:20 Demo, plain language** | Capture 2: `python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01`, then `python examples/ask.py "Which form do inspectors fill in for final inspection results?"` (the red `STALE` line). | Ask in plain language, for any date. What sampling rule applied in July 2025? And this form number comes with a warning: its source was written from a procedure revision that has since been replaced. |
 | **1:20-1:33 Agent and web** | `docs/agent_transcript.md` (the equal-authority answer), then the web page `python web/app.py` (or the deployed one): pick `final_inspection / sampling` and **drag the date slider** across 2024, 2025 and 2026 so the gold outline jumps from bar to bar and the answer changes. | A real Claude agent uses the same server over MCP, and refuses to pick between equal-authority sources. And in the web demo you drag the date and watch the answer change. |
@@ -69,7 +69,7 @@ committed store read-only.
 1. The agent and web segment (1:20), shorten to the transcript alone.
 2. Step 4 of the demo session.
 3. The second `ask.py` command.
-4. In the idea section, "Relate's full-text index finds the right topic for a question."
+4. In the idea section, "Relate's full-text and vector indexes find the right topic for a question."
 
 Keep the baseline-versus-Supersede comparison, the equal-authority step, and the results.
 
@@ -89,7 +89,7 @@ Place one caption at the start of each segment, white text on a dark band, 2 to 
 | 0:06 | A procedure is revised, but the old one stays in memory. |
 | 0:12 | Supersede: a graph on Relate (embedded graph database). |
 | 0:20 | Revisions, supersession and authority are graph structure. |
-| 0:27 | Relate's full-text index finds the topic; Cypher decides the fact in force. |
+| 0:27 | Relate's full-text and vector indexes find the topic; Cypher decides the fact in force. |
 | 0:32 | Naive baseline: newest fact = 3 years (a shift note). |
 | 0:40 | Supersede: 10 years, from the customer requirement, with the reason. |
 | 0:48 | Equal-authority conflict: reported as unresolved, not guessed. |

@@ -1,1 +1,2 @@
 CREATE FULLTEXT INDEX `topic_text` FOR (n:`Topic`) ON EACH [n.`description`] OPTIONS {indexConfig: {`fulltext.analyzer`: 'standard-no-stop-words',`fulltext.eventually_consistent`: false}};
+CREATE VECTOR INDEX `topic_vec` FOR (n:`Topic`) ON (n.`embedding`) OPTIONS {indexConfig: {`vector.default_search_expansion_factor`: 3.0,`vector.dimensions`: 256,`vector.hnsw.ef_construction`: 100,`vector.hnsw.m`: 16,`vector.quantization.type`: 'BINARY',`vector.similarity_function`: 'COSINE'}};

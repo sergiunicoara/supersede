@@ -4,7 +4,7 @@
     python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01
     python examples/ask.py "After how many parts do we change tools?" --db path/to/store.relate
 
-Relate's full-text index finds the topic; the graph decides the value (supersession, authority,
+Relate's full-text and vector indexes (hybrid retrieval) find the topic; the graph decides the value (supersession, authority,
 ties, dates). The default store is the committed demo store, opened read-only.
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ def show(r: dict) -> None:
         print(f"result   : {r['status']}: {r['reason']}")
         return
     m, a = r["matched"], r["answer"]
-    print(f"topic    : {m['subject']} / {m['predicate']}  (search score {m['score']})")
+    print(f"topic    : {m['subject']} / {m['predicate']}  (fused retrieval score {m['score']})")
     print(f"           {m['description']}")
     print(f"status   : {a['status']}" + (f"   as of {a['as_of']}" if "as_of" in a else ""))
     if a["status"] in ("resolved", "agreed"):

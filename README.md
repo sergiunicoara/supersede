@@ -79,7 +79,7 @@ comes from, and how much that document outranks another (authority).
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
 (Rev)-[:SUPERSEDES]->(Rev)          // within one document: newer replaces older
 (Rev)-[:DERIVED_FROM]->(Rev)        // across documents: written from that revision
-(Topic {subject, predicate, description})   // plain-language description, searched by Relate's full-text index
+(Topic {subject, predicate, description, embedding})   // plain-language description, searched by Relate's full-text AND vector indexes
 ```
 
 ![The Supersede graph model: documents, revisions, facts, SUPERSEDES within a document, DERIVED_FROM across documents](docs/graph.svg)
@@ -91,9 +91,12 @@ comes from, and how much that document outranks another (authority).
     controlled procedure > work instruction > shift note or email). If authority ties, Supersede
     says *unresolved* instead of guessing.
   * Every answer carries its **reason** and the **overruled** sources.
-  * **Ask in plain language:** `ask()` searches the topic descriptions with Relate's full-text index
-    (BM25), then lets the graph decide the value, so a question gets the answer in force with its
-    reason, not the best-matching text.
+  * **Ask in plain language:** `ask()` searches the topic descriptions with **hybrid retrieval**
+    (Relate's full-text index and vector index, fused by reciprocal rank), then lets the graph decide the
+    value, so a question gets the answer in force with its reason, not the best-matching text.
+    The vectors come from a small built-in hashing embedder (no model, no key): it handles word forms and
+    typos but not true synonyms; pass your own embedder for those. `python eval/compare_retrieval.py` compares
+    full-text, vector and hybrid (see [docs/EVIDENCE.md](docs/EVIDENCE.md)).
   * **Time:** `answer(..., as_of=date)` answers for a past date. Effective dates are taken at face
     value and any missing, unreadable, future or out-of-order date is reported, never guessed.
   * **Lineage:** a revision can record which revision of another document it was written from.
@@ -115,10 +118,10 @@ agent's own process.
 commit, close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts;
 `NOT (...)` pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `[:DERIVED_FROM*1..]`,
 `*0..` for the cycle checks) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`; a
-**full-text index** (`CREATE FULLTEXT INDEX`) queried with `SEARCH ... SCORE AS`, which persists in
-the directory store and works on a read-only open. **Not used:** vector search (it needs embeddings
-you supply, and Relate does not compute them, so it would add a model dependency), Relate's own MCP
-server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools
+**full-text index** (`CREATE FULLTEXT INDEX`) and **vector index** (`CREATE VECTOR INDEX`, cosine) queried with
+`SEARCH ... SCORE AS`, which persist in the directory store and work on a read-only open; the two result lists are
+fused in Python because Relate's own `COMBINE` hybrid is still a preview feature. Relate does not compute
+embeddings, so Supersede supplies them. **Not used:** Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools
 instead.
 
 ## Setup and run
@@ -131,7 +134,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 160 tests (159 without an API key: one live test is skipped)
+python -m pytest -q                          # 168 tests (167 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
