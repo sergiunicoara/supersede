@@ -4,6 +4,24 @@
 
 Built for the Relate by Neo4j Hackathon on [Relate](https://relatedb.ai), the embedded graph database.
 
+## Try it in 2 minutes
+
+After the install in [Setup and run](#setup-and-run) (about 90 seconds, then everything below is
+offline):
+
+```bash
+python examples/demo_session.py                  # a naive baseline vs Supersede, in a few seconds
+python examples/ask.py "How long must retained samples be kept?"
+python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01
+python examples/ask.py "Which form do inspectors fill in for final inspection results?"
+```
+
+What to look at: the first answer is **10 years from the customer requirement**, although a newer
+shift note says 3 years (authority beats date, and the reason is shown). The second answers for a
+past date. The third names the form but also flags that its source was written from a procedure
+revision that has since been replaced (**stale**). A real Claude agent doing the same over MCP:
+[docs/agent_transcript.md](docs/agent_transcript.md).
+
 ## Use case
 
 Agents that remember facts from documents hit the same failure: a procedure gets revised, the old
@@ -31,6 +49,7 @@ comes from, and how much that document outranks another (authority).
 (Doc {authority})-[:HAS_REV]->(Rev)-[:ASSERTS]->(Fact {subject, predicate, value})
 (Rev)-[:SUPERSEDES]->(Rev)          // within one document: newer replaces older
 (Rev)-[:DERIVED_FROM]->(Rev)        // across documents: written from that revision
+(Topic {subject, predicate, description})   // plain-language description, searched by Relate's full-text index
 ```
 
 ![The Supersede graph model: documents, revisions, facts, SUPERSEDES within a document, DERIVED_FROM across documents](docs/graph.svg)
@@ -42,6 +61,11 @@ comes from, and how much that document outranks another (authority).
     controlled procedure > work instruction > shift note or email). If authority ties, Supersede
     says *unresolved* instead of guessing.
   * Every answer carries its **reason** and the **overruled** sources.
+  * **Ask in plain language:** `ask()` searches the topic descriptions with Relate's full-text index
+    (BM25), then lets the graph decide the value, so a question gets the answer in force with its
+    reason, not the best-matching text.
+  * **Time:** `answer(..., as_of=date)` answers for a past date. Effective dates are taken at face
+    value and any missing, unreadable, future or out-of-order date is reported, never guessed.
   * **Lineage:** a revision can record which revision of another document it was written from.
     `stale_derivations` follows those links, directly or through a chain, and lists current
     revisions that rest on a source that has since been superseded, and what replaced it.
@@ -60,9 +84,12 @@ agent's own process.
 **Relate capabilities used:** the embedded Python DB-API (`relate.connect`, `$name` parameters,
 commit, close); a persistent directory store, also opened `read_only=True`; `MERGE` upserts;
 `NOT (...)` pattern predicates; unbounded variable-length paths (`[:SUPERSEDES*1..]`, `[:DERIVED_FROM*1..]`,
-`*0..` for the cycle checks) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`. **Not used:** vector or
-full-text search, Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its
-own MCP server with domain tools instead.
+`*0..` for the cycle checks) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`; a
+**full-text index** (`CREATE FULLTEXT INDEX`) queried with `SEARCH ... SCORE AS`, which persists in
+the directory store and works on a read-only open. **Not used:** vector search (it needs embeddings
+you supply, and Relate does not compute them, so it would add a model dependency), Relate's own MCP
+server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools
+instead.
 
 ## Setup and run
 
@@ -78,6 +105,14 @@ python -m pytest -q                          # 80 tests (79 without an API key: 
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
+
+### A real agent
+
+`python examples/agent_demo.py` lets a Claude model use the MCP server with no script: it picks the
+tools itself. It needs `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`, and sends the questions
+and tool results (fictional data) to the API. A recorded run is in
+[docs/agent_transcript.md](docs/agent_transcript.md); it is verbatim, including one place where the
+model misreads `current_revisions` in its last answer.
 
 ### Demo
 
@@ -97,8 +132,8 @@ read from the environment only and is never stored.
 
 ### Use it from an MCP client
 
-Tools: `current_answer`, `find_contradictions`, `current_revisions`, `revision_history`,
-`stale_derivations`.
+Tools: `ask` (plain language), `current_answer`, `answer_as_of`, `find_contradictions`,
+`current_revisions`, `revision_history`, `stale_derivations`, `date_warnings`.
 
 Every tool only reads, so the server opens an existing store **read-only**, and it refuses a
 `--db` path that does not exist. MCP hosts start the server from their own working directory, so

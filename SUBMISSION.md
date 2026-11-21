@@ -43,7 +43,7 @@ you can query; contradictions are only looked for between current revisions, so 
 raise false alarms; and when equal-authority sources disagree it says `unresolved` rather than
 returning one of them.
 
-Supersede runs as an MCP server, so any MCP-capable agent can use it. The five tools:
+Supersede runs as an MCP server, so any MCP-capable agent can use it. The eight tools:
 
 | Tool | What it returns |
 |---|---|
@@ -51,6 +51,9 @@ Supersede runs as an MCP server, so any MCP-capable agent can use it. The five t
 | `find_contradictions()` | All conflicts between facts in current revisions, with the authority-based winner (or `null` on a tie) |
 | `current_revisions()` | Revision ids that have not been superseded |
 | `revision_history(rev_id)` | The revisions that `rev_id` replaced, nearest first |
+| `ask(question, as_of?)` | A plain-language question answered end to end: Relate's full-text search finds the topic, the graph decides the value in force, with the reason, overruled sources, stale-source warnings and, with `as_of`, date warnings; `no_match` when nothing fits |
+| `answer_as_of(subject, predicate, date)` | The value that was in force on a past date, with warnings about missing, unreadable, future or out-of-order effective dates |
+| `date_warnings()` | Effective-date problems in the store |
 | `stale_derivations()` | Current revisions written from a source revision (in another document, directly or through a chain) that has since been superseded, with what replaced it |
 
 ## 4. How Relate is used
@@ -96,6 +99,15 @@ RETURN o.id AS id, length(p) AS hops ORDER BY hops
 The same three-hop traversal `Doc -> Rev -> Fact` also drives `current_answer`, carrying each
 fact's document authority so the winner can be explained.
 
+*Retrieval, then reasoning.* In plain terms: find the topic whose description best matches the
+question with Relate's full-text index, then answer that key from the graph, so the result respects
+supersession and authority instead of returning the best-matching text:
+
+```cypher
+MATCH (t:Topic) SEARCH t IN (FULLTEXT INDEX topic_text FOR $q LIMIT 3) SCORE AS score
+RETURN t.subject AS subject, t.predicate AS predicate, score ORDER BY score DESC
+```
+
 *Stale derivations across documents.* In plain terms: follow `DERIVED_FROM` links from a revision
 that is still in force, one hop or several, and report any source along the way that has since been
 superseded:
@@ -123,7 +135,7 @@ subqueries, `MERGE`, and others) and prints PASS/FAIL for each, so the design re
 Cypher support surface rather than assumed Neo4j parity.
 
 The store (`Store`) wraps Relate with a small write API (add document, add revision, supersede,
-assert fact) and the read queries above. The MCP server exposes the five tools using the MCP Python
+assert fact) and the read queries above. The MCP server exposes the eight tools using the MCP Python
 SDK; every tool only reads, so it opens an existing store read-only and refuses a path that does
 not exist. `examples/mcp_smoke.py` spawns the server over stdio and calls it the way an agent would.
 Documents can be loaded from annotated Markdown (`python -m supersede.ingest`): one file per
@@ -250,6 +262,42 @@ Across all runs the model extracted no historical or rejected value, invented no
 guard rails rejected nothing. The model is not deterministic and the set is small and written by
 me, so this shows that the approach works, not how it performs on real documents.
 
+### Plain-language questions and "what was in force on this date?"
+
+Two further measurements, both deterministic (`python eval/run_eval.py`).
+
+**Plain-language questions.** 23 questions written as a person would ask them (paraphrases,
+ambiguous wording, 4 off-topic). Relate's full-text index finds the topic, then the graph decides
+the value. Compared with the *same* retrieval answered by the newest date, and with a naive retrieval
+that matches the question against the key names:
+
+| | Right topic first | Correct answer end to end |
+|---|---|---|
+| **Supersede `ask()`** (Relate full-text + graph) | **23/23** | **23/23** |
+| same retrieval, answered by newest date | 23/23 | 13/23 |
+| name-overlap retrieval, answered by newest date | 17/23 | 10/23 |
+
+Reading it: retrieval alone is not the point (the same retrieval with a newest-date answer gets only
+13 of 23); the graph reasoning on top is what turns a search hit into the value in force. The first
+run was 22/23: one off-topic question ("How many holidays do employees get?") matched a topic only
+through the generic words "how many". I then added "many" and "much" to the stop words, which is a
+change informed by that miss, so 23/23 is not a blind result.
+
+**As of a date.** 13 questions about what was in force on a given day, including the mistyped-date and
+missing-date documents: **Supersede 13/13**, against 11/13 for "the newest fact dated on or before
+that day". The baseline fails where authority or a tie matters. Effective dates are taken at face
+value and every problem that could affect an answer (blank, unreadable, future, or earlier than the
+revision it replaces) is reported in `warnings`. One case is a known limit, and is in the eval on
+purpose: a revision with no effective date cannot be placed on the timeline, so for a date after the
+change the answer is still the older value, with a warning saying so, while today's answer (which
+follows the revision chain) is the newer one.
+
+**A real agent.** `examples/agent_demo.py` gives a Claude model the MCP tools and lets it choose.
+A recorded run (`docs/agent_transcript.md`, verbatim) shows it declining to pick between two
+equal-authority sources, using `answer_as_of` for a past date, flagging a stale source, and
+saying it does not know when no topic matches. In its last answer it misreads one tool result,
+which the file shows as is.
+
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always
 a clean ranking. These results show the behavior on designed cases, not performance on real
@@ -284,9 +332,10 @@ These are plans, not features in the repo today.
 commit, close); a persistent directory store, also opened `read_only=True` (the committed demo
 store); `MERGE` upserts; `NOT (...)` pattern predicates; unbounded variable-length paths
 (`[:SUPERSEDES*1..]`, and `*0..` for the cycle check) with `length(p)`; multi-`MATCH` joins;
-`ORDER BY` and `count()`. **Not used:** vector or full-text search, Relate's own MCP server, the
-CLI, Bolt or HTTP, WebAssembly. Supersede exposes its own MCP server with five domain tools
-instead.
+`ORDER BY` and `count()`; a full-text index (`CREATE FULLTEXT INDEX`, queried with `SEARCH ... SCORE AS`)
+that persists in the directory store and works on a read-only open. **Not used:** vector search (it
+needs embeddings you supply; Relate does not compute them), Relate's own MCP server, the CLI, Bolt or
+HTTP, WebAssembly. Supersede exposes its own MCP server with eight domain tools instead.
 
 **Third-party tools:** the MCP Python SDK, PyYAML and pytest; optionally the Anthropic Python SDK
 (for `supersede.extract` and the demo's `--llm` flag).
