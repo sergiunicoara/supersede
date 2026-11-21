@@ -403,4 +403,4 @@ k=60; Relate's `COMBINE` is preview) over topic descriptions, with a dependency-
 typos, not synonyms; pluggable). Measured honestly in `docs/EVIDENCE.md`: hybrid 23/23 on the original questions and
 16/18 on 18 reworded ones, against 23 and 15 for full-text and 21 and 18 for vector-only: a modest, not decisive,
 difference. Threshold chosen on a separate calibration set; the earlier "vector search not used" statements are removed.
-Suite 168 (167 without a key).
+Suite 168 (167 without a key) at that PR; 173 (172) after the animated-picture PR.
