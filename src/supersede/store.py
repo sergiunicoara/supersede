@@ -7,6 +7,7 @@ authority level of the owning document.
 """
 from __future__ import annotations
 
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date as _date
@@ -47,12 +48,21 @@ class Store:
     executor keeps one connection valid for both file and in-memory databases.
     """
 
-    def __init__(self, path: str = ":memory:", read_only: bool = False, embedder: Embedder | None = None) -> None:
+    def __init__(self, path: str = ":memory:", read_only: bool = False, embedder: Embedder | None = None,
+                 combine: bool = False) -> None:
         """`read_only=True` opens an existing store without taking the writer lock (queries only).
 
         `embedder` turns topic descriptions and questions into vectors for Relate's vector index (default: the
         dependency-free `HashingEmbedder`). A store remembers which embedder built its vectors.
+
+        `combine=True` opts in to Relate's own `COMBINE` hybrid search (`ask(retrieval="combine")`). It is a
+        preview feature of Relate, so this sets `RELATE_PREVIEW=hybrid-search` for the process before connecting.
         """
+        self._combine = combine
+        if combine:
+            flags = [f for f in os.environ.get("RELATE_PREVIEW", "").split(",") if f]
+            if "hybrid-search" not in flags:
+                os.environ["RELATE_PREVIEW"] = ",".join(flags + ["hybrid-search"])
         self._embedder: Embedder = embedder or HashingEmbedder()
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="relate")
         self._conn = self._pool.submit(relate.connect, path, read_only=read_only).result()
@@ -437,24 +447,39 @@ class Store:
         except Exception:
             return None
 
+    def _combine_hits(self, text: str, vec: list[float], limit: int) -> list[dict[str, Any]]:
+        """Topics ranked by Relate's own `COMBINE` (weighted reciprocal rank fusion of the full-text and vector
+        indexes, equal weights, constant 60). Needs `Store(combine=True)`; raises if Relate rejects the query."""
+        return self._run(
+            "MATCH (t:Topic) SEARCH t IN (COMBINE ("
+            "VECTOR INDEX topic_vec FOR $v LIMIT $n WEIGHT 1, FULLTEXT INDEX topic_text FOR $q LIMIT $n WEIGHT 1) "
+            "USING WRRF WITH CONSTANT 60 LIMIT $n) SCORE AS score "
+            "RETURN t.subject AS subject, t.predicate AS predicate, t.description AS description, score "
+            "ORDER BY score DESC",
+            {"v": vec, "q": text, "n": int(limit)},
+        )
+
     def ask(self, question: str, k: int = 3, as_of: str | None = None, retrieval: str = "hybrid") -> dict[str, Any]:
         """Answer a plain-language question: retrieval finds the topic, the graph decides the value.
 
         Retrieval uses two Relate indexes over the topic descriptions: full-text (BM25, exact words) and vector
         (hashed word and character n-grams, which tolerate plurals, tenses and typos). `retrieval` is "hybrid" (the
-        default: both, fused by reciprocal rank), "fulltext" or "vector". The best topic is answered with `answer()`,
+        default: both, fused by reciprocal rank), "fulltext", "vector", or "combine" (the same two indexes fused by
+        Relate's own preview `COMBINE`; needs `Store(combine=True)`). The best topic is answered with `answer()`,
         so supersession, authority, ties and dates all apply, and the answer says if the revisions it rests on were
         written from a source that has since been superseded. A store built without vectors falls back to full-text.
         """
-        if retrieval not in ("hybrid", "fulltext", "vector"):
-            raise ValueError("retrieval must be 'hybrid', 'fulltext' or 'vector'")
+        if retrieval not in ("hybrid", "fulltext", "vector", "combine"):
+            raise ValueError("retrieval must be 'hybrid', 'fulltext', 'vector' or 'combine'")
+        if retrieval == "combine" and not self._combine:
+            raise ValueError("retrieval='combine' uses a Relate preview feature: open the store with Store(combine=True)")
         if as_of is not None and self._day(as_of) is None:
             raise ValueError(f"as_of must be a date like 2025-07-01, got {as_of!r}")
         terms = content_words(question)
         if not terms:
             return {"question": question, "status": "no_match", "reason": "the question has no searchable words"}
-        ft = self._fulltext_hits(terms, 10) if retrieval in ("hybrid", "fulltext") else []
-        vh = self._vector_hits(question, 10) if retrieval in ("hybrid", "vector") else []
+        ft = self._fulltext_hits(terms, 10) if retrieval in ("hybrid", "fulltext", "combine") else []
+        vh = self._vector_hits(question, 10) if retrieval in ("hybrid", "vector", "combine") else []
         if ft is None and not vh:
             return {"question": question, "status": "no_topics",
                     "reason": "this store has no topic descriptions; add them with Store.add_topic()"}
@@ -466,9 +491,23 @@ class Store:
             r["rrf"] += 1.0 / (self.RRF_K + rank)
             r[field] = value
 
-        for rank, h in enumerate(ft or [], 1):
+        if retrieval == "combine":
+            # Relate does the ranking. It has no minimum score, so the same gate as "hybrid" decides which results
+            # count: a full-text hit, or a vector score of at least MIN_VECTOR_SCORE.
+            if vh is None:
+                return {"question": question, "status": "no_topics",
+                        "reason": "COMBINE needs the vector index built by this store's embedder"}
+            ft_rank = {f"{h['subject']}.{h['predicate']}": i for i, h in enumerate(ft or [], 1)}
+            vscore = {f"{h['subject']}.{h['predicate']}": h["score"] for h in vh}
+            for h in self._combine_hits(" ".join(terms), self._embedder.embed(question), 10):
+                key = f"{h['subject']}.{h['predicate']}"
+                if key in ft_rank or vscore.get(key, 0.0) >= self.MIN_VECTOR_SCORE:
+                    ranked[key] = {**h, "rrf": h["score"], "fulltext_rank": ft_rank.get(key),
+                                   "vector_score": round(vscore[key], 3) if key in vscore else None}
+        for rank, h in enumerate(ft or [] if retrieval != "combine" else [], 1):
             add(h, rank, "fulltext_rank", rank)
-        for rank, h in enumerate([h for h in (vh or []) if h["score"] >= self.MIN_VECTOR_SCORE], 1):
+        for rank, h in enumerate([h for h in (vh or []) if h["score"] >= self.MIN_VECTOR_SCORE]
+                                 if retrieval != "combine" else [], 1):
             add(h, rank, "vector_score", round(h["score"], 3))
         if not ranked:
             return {"question": question, "status": "no_match", "reason": "no topic matches the question"}

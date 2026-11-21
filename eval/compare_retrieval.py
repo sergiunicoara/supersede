@@ -1,4 +1,4 @@
-"""Full-text vs vector vs hybrid retrieval on both question sets (answers must be exactly right: key, status, value).
+"""Full-text vs vector vs hybrid (my fusion) vs combine (Relate's own preview COMBINE) retrieval on both question sets (answers must be exactly right: key, status, value).
 
 `retrieval` (23) is the original set. `retrieval_variants` (18) rewords questions (word forms, synonyms, typos);
 it was written before any of these three modes was run on it. Run:  python eval/compare_retrieval.py
@@ -12,7 +12,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import run_eval  # noqa: E402
 
-MODES = ("fulltext", "vector", "hybrid")
+MODES = ("fulltext", "vector", "hybrid", "combine")
 SECTIONS = ("retrieval", "retrieval_variants")
 
 
