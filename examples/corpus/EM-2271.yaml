@@ -1,0 +1,10 @@
+# FICTIONAL. Email from an invented quality manager.
+id: EM-2271
+title: Email from the quality manager, 2 October
+kind: email
+authority: 1
+revisions:
+  - rev: 1
+    effective: "2025-10-02"
+    facts:
+      - {id: F-EM2271-1-1, subject: line_3, predicate: changeover_target_min, value: "25"}

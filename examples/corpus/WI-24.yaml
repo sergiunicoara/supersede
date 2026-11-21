@@ -1,0 +1,10 @@
+# FICTIONAL.
+id: WI-24
+title: Machining cell tooling sheet
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2025-08-20"
+    facts:
+      - {id: F-WI24-1-1, subject: machining_cell, predicate: tool_change_interval, value: "400 parts"}

@@ -1,0 +1,19 @@
+# FICTIONAL. Veltara Automotive is an invented customer.
+id: CSR-VEL-01
+title: Veltara Automotive supplier quality requirements
+kind: customer-specific requirement
+authority: 4
+revisions:
+  - rev: 1
+    effective: "2024-02-01"
+    facts:
+      - {id: F-CSRVEL-1-1, subject: retained_sample, predicate: retention_period, value: "7 years"}
+      - {id: F-CSRVEL-1-2, subject: customer_notification, predicate: hours, value: "48"}
+      - {id: F-CSRVEL-1-3, subject: supplier_audit, predicate: frequency, value: "every 2 years"}
+  - rev: 2
+    effective: "2025-04-01"
+    supersedes: 1
+    facts:
+      - {id: F-CSRVEL-2-1, subject: retained_sample, predicate: retention_period, value: "10 years"}
+      - {id: F-CSRVEL-2-2, subject: customer_notification, predicate: hours, value: "24"}
+      - {id: F-CSRVEL-2-3, subject: supplier_audit, predicate: frequency, value: "annual"}

@@ -1,0 +1,11 @@
+# FICTIONAL. Korvin Mobility is an invented customer.
+id: CSR-KOR-01
+title: Korvin Mobility supplier quality requirements
+kind: customer-specific requirement
+authority: 4
+revisions:
+  - rev: 1
+    effective: "2024-11-01"
+    facts:
+      - {id: F-CSRKOR-1-1, subject: paint_line, predicate: film_thickness_um, value: "70-90"}
+      - {id: F-CSRKOR-1-2, subject: supplier_audit, predicate: frequency, value: "annual"}

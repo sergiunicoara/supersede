@@ -1,0 +1,15 @@
+# FICTIONAL.
+id: QP-11
+title: Gauge calibration control procedure
+kind: controlled procedure
+authority: 3
+revisions:
+  - rev: 1
+    effective: "2024-03-15"
+    facts:
+      - {id: F-QP11-1-1, subject: gauge_calibration, predicate: interval, value: "12 months"}
+  - rev: 2
+    effective: "2025-09-01"
+    supersedes: 1
+    facts:
+      - {id: F-QP11-2-1, subject: gauge_calibration, predicate: interval, value: "6 months"}

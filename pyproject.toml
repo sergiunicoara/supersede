@@ -13,7 +13,8 @@ authors = [{ name = "Sergiu Nicoară" }]
 dependencies = ["relate-db>=1.2.0", "mcp>=2"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pyyaml>=6"]
+llm = ["anthropic"]  # only for `examples/demo_session.py --llm`
 
 [project.scripts]
 supersede-mcp = "supersede.mcp_server:main"

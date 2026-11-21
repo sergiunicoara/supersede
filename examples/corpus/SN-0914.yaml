@@ -1,0 +1,11 @@
+# FICTIONAL. Night-shift note.
+id: SN-0914
+title: Night shift note, 9 September
+kind: shift note
+authority: 1
+revisions:
+  - rev: 1
+    effective: "2025-09-09"
+    facts:
+      - {id: F-SN0914-1-1, subject: retained_sample, predicate: retention_period, value: "3 years"}
+      - {id: F-SN0914-1-2, subject: line_3, predicate: changeover_target_min, value: "30"}
