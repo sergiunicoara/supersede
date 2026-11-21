@@ -4,6 +4,15 @@
 
 Built for the Relate by Neo4j Hackathon on [Relate](https://relatedb.ai), the embedded graph database.
 
+```
+Q: How long must retained samples be kept?
+naive baseline (newest fact wins):  3 years    (a night-shift note)
+Supersede:                          10 years   from the customer requirement, because it outranks the shift note
+```
+
+Supersede keeps documents, their revisions and their authority as a graph, so an agent gets the value that is
+**in force**, with the reason, instead of the best-matching or newest text.
+
 ## Try it in 2 minutes
 
 After the install in [Setup and run](#setup-and-run) (about 90 seconds, then everything below is
@@ -106,36 +115,19 @@ python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls i
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
 
-### A web page
+### Demo, web page and a real agent
 
-`python web/app.py` serves a read-only page over the committed fictional store (standard library only,
-no keys, no writes): type a question, optionally pick a date, see the value in force, the reason,
-what it overruled, stale sources and date problems. It ships as a Docker image (`Dockerfile`); how to
-host it on Hugging Face Spaces or elsewhere is in [docs/DEPLOY.md](docs/DEPLOY.md).
-
-### A real agent
-
-`python examples/agent_demo.py` lets a Claude model use the MCP server with no script: it picks the
-tools itself. It needs `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`, and sends the questions
-and tool results (fictional data) to the API. A recorded run is in
-[docs/agent_transcript.md](docs/agent_transcript.md); it is verbatim, including one place where the
-model misreads `current_revisions` in its last answer.
-
-### Demo
-
-A scripted agent session over a larger fictional corpus (16 documents, 26 revisions, 47 facts;
-the cases are described in [examples/corpus/CASES.md](examples/corpus/CASES.md)). It starts the
-MCP server over stdio, connects as an MCP client, and runs four steps: a naive baseline vs
-`current_answer`, `find_contradictions`, an equal-authority conflict reported as `unresolved`,
-and `revision_history`. It ends with the eval scores. Fully offline.
-
-```bash
-python examples/demo_session.py            # add --pause to slow it down for recording
-```
-
-Optional: `pip install -e ".[llm]"`, set `ANTHROPIC_API_KEY` in your environment, and add `--llm`
-to have a model phrase the step-1 answer in one sentence from `current_answer`'s JSON. The key is
-read from the environment only and is never stored.
+* `python examples/demo_session.py` runs a scripted agent session over the fictional corpus (16 documents, 26
+  revisions, 47 facts; cases in [examples/corpus/CASES.md](examples/corpus/CASES.md)): a naive baseline against
+  `current_answer`, `find_contradictions`, an equal-authority conflict reported as `unresolved`, and
+  `revision_history`. Offline; add `--pause` to slow it down, or `--llm` (needs the `llm` extra and
+  `ANTHROPIC_API_KEY`) to have a model phrase the first answer in one sentence from the tool's JSON.
+* `python web/app.py` serves a read-only page over the committed store (standard library only, no keys, no writes).
+  It ships as a Docker image; hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
+* `python examples/agent_demo.py` lets a Claude model use the MCP server with no script (needs
+  `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`; it sends the questions and fictional tool results to the API).
+  A verbatim recorded run is in [docs/agent_transcript.md](docs/agent_transcript.md), including one place where the
+  model misreads a tool result.
 
 ### Use it from an MCP client
 
@@ -207,43 +199,12 @@ This sends the document text to the Anthropic API, so do not use it on confident
 that is acceptable; the default install stays offline. Each document must still carry the small
 header (document id, authority, revision, dates).
 
-Measured live with `python eval/run_extraction_eval.py` on 8 fictional documents with 18 gold facts
-(written before any model was run; besides fixed prompt rules, the vocabulary is the only task guidance the model gets): the first run
-scored precision 0.67 and recall 0.67, and every miss was a value format (`2.5 bar` instead of
-`2.5`) that my vocabulary had not specified. After clarifying the value format in the vocabulary
-(a change informed by that first run), three runs scored precision 1.00 and recall 0.94, 1.00 and
-0.94; the one fact that varies is an ambiguous sentence the model sometimes declines to map. The
-model never extracted a historical or rejected value and never invented a fact, and the guard rails
-rejected nothing. This is a small, author-written set, so treat it as evidence that the approach
-works, not as a benchmark.
-
-It also works on **real text**: [examples/real](examples/real/) holds 13 documents from the public eCFR
-(US federal regulations and one FDA guidance document, public domain), including a **quality-manufacturing** history: FDA's device
-quality regulation, 21 CFR Part 820, in its 2016 Quality System Regulation and 2026 Quality Management
-System Regulation forms. A record-retention requirement ("no less than 2 years") that the 2016 text states
-is no longer stated in the 2026 text (it moved to ISO 13485, which is not in the CFR), so Supersede answers
-`2 years` for a date before 2026 and `unknown` today; a complaint-record item disappears; and the regulation
-renames itself. Two Federal Acquisition Regulation sections add dollar thresholds that really changed
-($5.5M, $6M, $7.5M and $7M, $7.5M, $9M).
-
-Measured live on the 13 documents (20 gold facts, written before any model ran; two documents are expected
-to give no facts, to check that the model does not add requirements the text does not state): on the first
-run the model got 17 of 20 facts right, added nothing that is not in the text, and extracted nothing from the
-two no-fact documents. The 3 misses were my own wording problems (the model copied "The dates and results of
-the investigation" with its capital "The", and read "quality system" for the name). After I clarified the
-vocabulary (informed by that run), three runs got 20 of 20, and the graph built from the extracted facts gave
-the same answer as the gold graph for all 48 (key, date) pairs. The FAR sections had the same pattern in an
-earlier run (13 of 15, then 15 of 15 three times). This is a small, author-chosen sample, not a benchmark.
-
-The folder also has a **real authority hierarchy**: FDA's non-binding guidance *Medical Device Reporting for
-Manufacturers* (2016, excerpted) against the regulation it explains. The guidance still cites 21 CFR 820.198, a
-section removed in 2026, so Supersede answers with the regulation, lists the guidance as overruled, answers the
-guidance's statement for dates before the change, and flags the guidance as written from replaced text. On the 16
-documents (29 gold facts) the first, blind run on the new keys got 24 of 27 right (two of my gold facts were
-wrong or missing and one value was overlong and rejected by the guard rails); after I corrected those two gold
-facts and clarified the wording (informed), three runs got 27 of 29, the two remaining misses being string
-boundaries (`21 CFR 820.198(a)` against `21 CFR 820.198`, "The dates..." with its article), with no wrong fact.
-A statute > regulation > guidance order is a real hierarchy, but it is not a plant's own tiers; see
+Measured live, on fictional prose and on **real text**: US federal regulations from the public eCFR, including
+FDA's device quality regulation (21 CFR Part 820) before and after its 2026 rewrite, and an FDA guidance that still
+cites a regulation section removed in 2026. The model never invented a fact (the guard rails reject anything without a
+verbatim quote), and on the real text three informed runs scored 27 of 29 gold facts; the first, blind run on the
+newest keys scored 24 of 27. The numbers, the blind-versus-informed runs and their limits are in
+[docs/EVIDENCE.md](docs/EVIDENCE.md); the real documents and their provenance are in
 [examples/real](examples/real/).
 
 ## Where the data lives
@@ -257,11 +218,26 @@ fictional corpus: 16 documents, 26 revisions, 47 facts). Open it with
 
 ## Results
 
-`python eval/run_eval.py` runs 19 questions over the fictional corpus: **Supersede 19/19**, a
-newest-effective-date baseline 9/19, and two ablations that each keep one part of the graph
-(following `SUPERSEDES` only 15/19, authority only 11/19). The cases are in
-[examples/corpus/CASES.md](examples/corpus/CASES.md). The data is fictional and the cases were
-designed, so this shows behavior, not performance on real documents, which are messier.
+`python eval/run_eval.py` is deterministic and offline:
+
+| Test | Supersede | Baseline |
+|---|---|---|
+| 19 revision questions (fictional corpus, designed cases) | **19/19** | 9/19 (newest date wins); ablations 15/19 (follow `SUPERSEDES` only), 11/19 (authority only) |
+| 23 plain-language questions, correct end to end | **23/23** | 13/23 (same search, newest date wins) |
+| 13 "what was in force on this date" questions | **13/13** | 11/13 (newest fact before the date) |
+| 3 cross-document lineage checks | **3/3** | n/a (the baselines keep no derivation structure) |
+
+These are demonstrations of behavior on cases I designed, and a few numbers come from a run after a fix informed by
+an earlier run. [docs/EVIDENCE.md](docs/EVIDENCE.md) lists every measurement with its blind result and its limits.
+
+## Limits
+
+* **Mostly fictional data.** The real-text set is 16 documents in 7 chains that I chose, and its hierarchy is a
+  regulation over guidance, not a plant's own tiers. Company documents, shift notes and emails are untested on real data.
+* **Exact-string values:** `100%` and `100% inspection`, or `2 years` and `two years`, count as different values.
+* **A revision replaces the whole previous one:** a requirement it stops stating is no longer in force.
+* **Authority is one integer per document,** and dates are taken at face value (bad dates are reported, not repaired).
+* **Extraction** needs a vocabulary and a document header, is not deterministic, and sends text to an API.
 
 ## Design notes
 
@@ -283,7 +259,10 @@ designed, so this shows behavior, not performance on real documents, which are m
 * **Reused code:** none copied. The *concepts* (document authority hierarchy, `SUPERSEDES` chains,
   contradiction detection) come from the author's earlier GraphRAG work; this implementation was
   written from scratch for Relate.
-* **Data:** all demo data is fictional and written for this repo. No client or third-party documents.
+* **Data:** the corpus and demo data are fictional and written for this repo. `examples/real/` contains text of US
+  federal regulations from the eCFR and an excerpt of one FDA guidance document: works of the US government in the
+  public domain, each file stating its source and version date. No client documents, and no copyrighted third-party
+  text (ISO 13485, which the 2026 regulation incorporates by reference, is not included).
 * **AI tools:** Claude (Anthropic), used through Claude Code, helped throughout: the code, tests,
   the fictional corpus and eval questions, the eval and baselines, the demo scripts and the screen
   capture of the demo, a repo audit, and the README, submission text and video script. The author
