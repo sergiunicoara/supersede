@@ -78,6 +78,34 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `lineage` PR (cross-document chain, remaining items).**
+
+- **Lineage (the part of D5 that was skipped, and the audit's creativity suggestion).** A revision
+  can record the revision of another document it was written from (`DERIVED_FROM`), and
+  `stale_derivations` (also an MCP tool, now five) follows those links, directly or through a chain,
+  to flag current revisions that rest on a superseded source, naming what replaced it. The corpus
+  has three stale cases (one two hops away) and one control that must not be flagged; the eval
+  checks them (3/3) but does not score the baselines, because they keep no derivation structure.
+  Ingestion accepts `derived_from:` in the header. The corpus is now 16 documents, 26 revisions and
+  47 facts; the suite is 59 tests.
+- **D9:** `anthropic>=2,<3` is pinned. The extra installs in a clean venv and the SDK call shape the
+  demo uses exists (checked without an API call, so `--llm` itself is still untested against the
+  real API).
+- **D15:** the CI matrix is extended to Python 3.10, 3.11, 3.12 and 3.13.
+- **D14:** the repo-local git e-mail is the GitHub noreply address from now on. Existing commits are
+  not rewritten.
+- **Part B suggestions:** a graph diagram (`docs/graph.svg`) is in the README, and the
+  `DERIVED_FROM` case is the lineage feature above.
+- **Updated estimate (mine, not a measurement)** with the PRs since the audit: creativity 7,
+  usefulness 6, completeness 7 (still without a recorded video), clarity 8, connected context 7.
+  About **70/100** with the overview weights (7×1 + 7×3 + 7×2.5 + 6×2 + 8×1.5) and 7.0/10 with equal
+  weights. The largest remaining gaps are outside the code: the narrated video and the Devpost
+  entry (D1 and D2), and that all evidence is on designed fictional data.
+- **Still not done:** D1 and D2 (yours); automatic fact extraction from unannotated text; and the
+  `--llm` path has not been run against the real API.
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |
@@ -237,11 +265,11 @@ Reading:
 | D5 | Eval doesn't show what `SUPERSEDES` adds (as audited: ablation 9/13 = 9/13) | High | Connected context (30 on overview), creativity | Add realistic cases where supersession and dates disagree, plus a cross-document reference chain; publish the ablation table | 3-5 h | **Done in the `eval-supersession` PR** (date cases and ablations; no cross-document reference chain yet) |
 | D6 | AI-use disclosure understates scope | High (Rules Section 3 requires it) | Eligibility | Say that code, tests, docs, corpus, eval, demo and submission text were AI-assisted | 5 min | **Done in the `store-fixes` PR** |
 | D7 | `Store` defects: reused fid corrupts data, `None` authority crashes, history capped at 20, same-revision conflict missing, missing ids silent, cycles unguarded | Medium | Completeness | Validate inputs (fail on unknown ids, duplicate fid, non-int authority); raise or remove the cap; add a same-revision case | 1-2 h | **Done in the `store-fixes` PR** (the xfail tests are now passing tests) |
-| D8 | Server opens writable; a missing `--db` path creates a store | Medium | Completeness, connected context | `--read-only` flag (or default) and refuse a non-existent `--db` | 30 min | Needs your OK |
-| D9 | Unbounded dependency versions on an experimental product (Rules Section 3) | Medium | Reproducibility | `relate-db>=1.2,<1.3`, `mcp>=2,<3` | 5 min | Needs your OK |
-| D10 | `SUBMISSION.md`: "18 tests", unbacked video sentence, no explicit capabilities list | Medium | Clarity | Update the count after merge, drop or keep the video sentence, add "Relate capabilities used" | 10 min | Needs your OK (claims) |
-| D11 | README not in the overview template's structure | Medium | Docs (15) | Headings: Use case / How it uses Relate (Mode, Why, What the graph models) / Setup and run / Where the data lives | 30 min | Recommended |
-| D12 | No ingestion from documents | Medium | Usefulness | Small loader from fictional text documents | half a day or more | Optional |
+| D8 | Server opens writable; a missing `--db` path creates a store | Medium | Completeness, connected context | `--read-only` flag (or default) and refuse a non-existent `--db` | 30 min | **Done** (PR 9) |
+| D9 | Unbounded dependency versions on an experimental product (Rules Section 3) | Medium | Reproducibility | `relate-db>=1.2,<1.3`, `mcp>=2,<3` | 5 min | **Done** (PR 9; `anthropic>=2,<3` added in the lineage PR) |
+| D10 | `SUBMISSION.md`: "18 tests", unbacked video sentence, no explicit capabilities list | Medium | Clarity | Update the count after merge, drop or keep the video sentence, add "Relate capabilities used" | 10 min | **Done** (PR 8, PR 9) |
+| D11 | README not in the overview template's structure | Medium | Docs (15) | Headings: Use case / How it uses Relate (Mode, Why, What the graph models) / Setup and run / Where the data lives | 30 min | **Done** (PR 9) |
+| D12 | No ingestion from documents | Medium | Usefulness | Small loader from fictional text documents | half a day or more | **Done for annotated Markdown** (PR 9); automatic extraction from unannotated text is not built |
 | D13 | Windows activation and Python version missing from README | Low | Reproducibility | Added | done | **This PR** |
-| D14 | Personal e-mail address in commit metadata | Low (privacy) | none | Leave it (no history rewrite); set a noreply e-mail address for future commits | 2 min | Informational |
-| D15 | Untested: Python 3.10, macOS, Linux | Low | Reproducibility | One run on each, or a CI matrix | 30 min | Recommended |
+| D14 | Personal e-mail address in commit metadata | Low (privacy) | none | Leave it (no history rewrite); set a noreply e-mail address for future commits | 2 min | Repo-local git e-mail set to the GitHub noreply address for future commits; existing history untouched |
+| D15 | Untested: Python 3.10, macOS, Linux | Low | Reproducibility | One run on each, or a CI matrix | 30 min | **Done** (PR 9; Python 3.11 and 3.13 added in the lineage PR) |
