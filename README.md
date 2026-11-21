@@ -15,10 +15,11 @@ Supersede:                          10 years   from the customer requirement, be
 Supersede keeps documents, their revisions and their authority as a graph, so an agent gets the value that is
 **in force**, with the reason, instead of the best-matching or newest text.
 
-![The same question on 2025-07-01: each bar is a revision, colour is authority, the gold outline is the value in force. A work instruction says 100% inspection, the higher-authority procedure says AQL 1.0, and the procedure wins.](docs/img/timeline-final_inspection-sampling-2025-07-01.svg)
+![The same question at three dates, looping: in June 2024 only a work instruction exists (100% inspection); by July 2025 a higher-authority procedure says AQL 1.0 and wins; in March 2026 revision 3 says AQL 0.65. Each bar is a revision, colour is authority, the gold outline is the value in force.](docs/img/timeline-final_inspection-sampling-animated.svg)
 
-*The sampling rule on 2025-07-01, drawn from the real store: each bar is a revision, colour is authority, the gold
-outline is the value in force. `python web/app.py` has a slider that moves the date and redraws this.*
+*The sampling rule at 2024-06-01, 2025-07-01 and 2026-03-01, looping, drawn from the real store: each bar is a revision,
+colour is authority, the gold outline is the value in force. `python web/app.py` has a slider that moves the date
+yourself. Short on time? Read the [judge guide](JUDGES.md): three commands and what each proves.*
 
 ## Try it in 2 minutes
 

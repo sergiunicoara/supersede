@@ -152,18 +152,62 @@ def render_svg(store: Store, subject: str, predicate: str, as_of: str | None = N
     return "\n".join(o)
 
 
+def render_animated(store: Store, subject: str, predicate: str, dates: list[str], seconds: float = 3.6,
+                    still: int = 0) -> str:
+    """One SVG that cycles through the frames for `dates` (CSS only, no JavaScript), looping forever.
+
+    Every frame is `render_svg()` for that date, so the animation cannot disagree with the tools. Where CSS
+    animation is off (a static renderer, or `prefers-reduced-motion`) only frame number `still` is shown.
+    """
+    if not dates:
+        raise ValueError("need at least one date")
+    if not 0 <= still < len(dates):
+        raise ValueError("still must index one of the dates")
+    frames = [render_svg(store, subject, predicate, d) for d in dates]
+    head = frames[0].split(">", 1)[0]  # the opening <svg ...> tag; all frames share the same size
+    n = len(frames)
+    nl = chr(10)
+    css, body = [], []
+    for i, frame in enumerate(frames):
+        a, b = 100.0 * i / n, 100.0 * (i + 1) / n  # this frame is shown from a% to b% of the cycle
+        fade = 1.0  # percent of the cycle spent cross-fading
+        stops = [(0.0, 1 if i == 0 else 0)]
+        if i > 0:
+            stops += [(a - fade, 0), (a, 1)]
+        if i < n - 1:
+            stops += [(b - fade, 1), (b, 0), (100.0, 0)]
+        else:
+            stops += [(100.0, 1)]
+        css.append(f"@keyframes f{i}{{" + "".join(f"{x:.2f}%{{opacity:{v}}}" for x, v in stops) + "}")
+        css.append(f".f{i}{{animation:f{i} {seconds * n:.1f}s linear infinite}}")
+        inner = frame.split(">", 1)[1].rsplit("</svg>", 1)[0]
+        body.append(f'<g class="f{i}" opacity="{1 if i == still else 0}">{inner}</g>')
+    still_css = "".join(f".f{i}{{animation:none;opacity:{1 if i == still else 0}}}" for i in range(n))
+    title = escape(f"{subject} / {predicate}: the value in force on {', '.join(dates)}")
+    return nl.join([head + ">", f"<title>{title}</title>",
+                    "<style>" + nl.join(css) + "@media (prefers-reduced-motion: reduce){" + still_css + "}</style>",
+                    *body, "</svg>"])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--db", default=str(DEFAULT_DB))
     ap.add_argument("--key", required=True, help="subject.predicate")
     ap.add_argument("--dates", required=True, help="comma-separated YYYY-MM-DD dates (or 'today')")
     ap.add_argument("--out", required=True, help="folder for the SVG files")
+    ap.add_argument("--animate", action="store_true", help="write ONE looping animated SVG for all the dates")
     args = ap.parse_args()
     subject, predicate = args.key.split(".", 1)
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     store = Store(args.db, read_only=True)
     try:
+        if args.animate:
+            dates = args.dates.split(",")
+            path = out / f"timeline-{subject}-{predicate}-animated.svg"
+            path.write_text(render_animated(store, subject, predicate, dates, still=len(dates) // 2), encoding="utf-8")
+            print("wrote", path)
+            return 0
         for d in args.dates.split(","):
             path = out / f"timeline-{subject}-{predicate}-{d}.svg"
             path.write_text(render_svg(store, subject, predicate, None if d == "today" else d), encoding="utf-8")

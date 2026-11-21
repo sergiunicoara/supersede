@@ -132,7 +132,7 @@ def _baseline_value_ok(q: dict, key: str | None, docs: list[dict]) -> bool:
 
 
 def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS, section="retrieval", mode="hybrid") -> list[dict]:
-    """Plain-language questions through ask(). Compares Relate full-text retrieval + graph reasoning with
+    """Plain-language questions through ask(). Compares Relate hybrid retrieval + graph reasoning with
     (a) the same retrieval answered by newest date and (b) name-overlap retrieval answered by newest date."""
     items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get(section, [])
     docs, store = _loaded(corpus_dir)
@@ -240,7 +240,7 @@ def main() -> int:
     ret = evaluate_retrieval()
     nr = len(ret)
     print(f"\nPlain-language questions through ask() ({nr}; {sum(1 for x in ret if x['q']['expected_key'] is None)} are off-topic):")
-    print(f"  retrieval, right topic first:  Relate full-text {sum(x['key_ok'] for x in ret)}/{nr}"
+    print(f"  retrieval, right topic first:  Relate hybrid (full-text + vector) {sum(x['key_ok'] for x in ret)}/{nr}"
           f"   name-overlap baseline {sum(x['naive_key_ok'] for x in ret)}/{nr}")
     print(f"  answer correct end to end:     ask() {sum(x['ok'] for x in ret)}/{nr}"
           f"   same retrieval + newest date {sum(x['same_retrieval_newest_ok'] for x in ret)}/{nr}"
