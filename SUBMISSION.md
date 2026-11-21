@@ -218,9 +218,37 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 59 tests, including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+* The suite has 80 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
   chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
   a store byte-identical, and one that runs the demo end to end over MCP.
+
+### Extraction from unannotated text
+
+Ingestion reads facts an author has marked. For plain prose, `supersede.extract` asks a Claude model
+for facts, constrained so it cannot corrupt the graph: only keys from a vocabulary you supply, a
+verbatim quote for every fact that must really appear in the document (and contain the value),
+rejections listed and never written, and a review copy for a human before anything is loaded. It is
+optional, needs an API key, and sends the text to the API.
+
+Measured live (`python eval/run_extraction_eval.py`) on 8 fictional unannotated documents with 18
+gold facts, written before any model was run. The documents contain traps: a value that used to apply
+(`12`, `12 months`), a rejected option (`acetone`), distractor numbers, and one handover note with
+nothing to extract.
+
+| Run | Precision | Recall | Graph answers identical to gold |
+|---|---|---|---|
+| 1: vocabulary without a value-format rule | 0.67 | 0.67 | 6 of 10 keys |
+| 2: after clarifying the value format | 1.00 | 0.94 | 9 of 10 |
+| 3: same, repeated | 1.00 | 1.00 | 10 of 10 |
+| 4: same, repeated | 1.00 | 0.94 | 9 of 10 |
+
+All six misses in run 1 were one value-format difference (`2.5 bar` instead of `2.5`, `every 6
+months` instead of `6 months`), not wrong facts. I then added the format rule to the vocabulary,
+which is a change informed by run 1, so runs 2 to 4 are not blind. The only fact that varies is an
+ambiguous sentence ("responsibility of the quality lab") that the model sometimes declines to map.
+Across all runs the model extracted no historical or rejected value, invented nothing, and the
+guard rails rejected nothing. The model is not deterministic and the set is small and written by
+me, so this shows that the approach works, not how it performs on real documents.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always
@@ -231,9 +259,10 @@ corpora.
 
 These are plans, not features in the repo today.
 
-* **Automatic extraction.** Ingestion today reads facts that an author has marked inline in
-  Markdown; it does not extract facts or revision links from unannotated text. Doing that reliably
-  is the next step.
+* **Broader extraction.** Fact extraction from prose exists (above) but works against a fixed
+  vocabulary and still needs the document header. Next: evaluate it on real documents, extract
+  revision links (what a document replaces or was written from) from the text, and propose new
+  vocabulary entries for a human to approve.
 * **Value normalisation.** Contradictions compare values as exact strings, so `100%` and
   `100% inspection` count as different. Normalising values (or adding a similarity check) would cut
   false conflicts.
@@ -259,7 +288,8 @@ store); `MERGE` upserts; `NOT (...)` pattern predicates; unbounded variable-leng
 CLI, Bolt or HTTP, WebAssembly. Supersede exposes its own MCP server with five domain tools
 instead.
 
-**Third-party tools:** the MCP Python SDK, PyYAML and pytest; optionally the Anthropic Python SDK.
+**Third-party tools:** the MCP Python SDK, PyYAML and pytest; optionally the Anthropic Python SDK
+(for `supersede.extract` and the demo's `--llm` flag).
 **AI tools:** Claude (Anthropic) through Claude Code, as described in Disclosures.
 
 ## 10. Disclosures
@@ -273,6 +303,8 @@ instead.
 * **AI tools:** Claude (Anthropic), used through Claude Code, helped throughout: the code, tests,
   the fictional corpus and eval questions, the eval and baselines, the demo scripts and the screen
   capture of the demo, a repo audit, and the README, submission text and video script. I directed
-  the design and am responsible for the result.
+  the design and am responsible for the result. Separately, the optional `supersede.extract` tool
+  and the demo's `--llm` flag call a Claude model at run time.
 * **Third-party:** Relate (`relate-db` 1.2.0, Apache-2.0) and the MCP Python SDK. Dev only: pytest
-  and PyYAML. Optional (`--llm` in the demo only): the Anthropic Python SDK.
+  and PyYAML. Optional (the demo's `--llm` flag and `supersede.extract`): the Anthropic Python SDK
+  and the Anthropic API, to which those two features send text; the default path is offline.

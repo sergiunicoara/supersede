@@ -106,6 +106,30 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `extraction` PR (the last implementable gaps).**
+
+- **Automatic extraction from unannotated text** is built: `supersede.extract` asks a Claude model for
+  facts constrained to a vocabulary, requires a verbatim evidence quote that really appears in the
+  text (and contains the value), rejects and lists everything else, and writes an annotated review
+  copy for a human instead of touching a store. Measured live on 8 fictional documents / 18 gold
+  facts (gold written before any model ran): first run precision 0.67 / recall 0.67 (all misses were
+  a value-format convention the vocabulary had not specified); after clarifying that (informed by
+  the first run, so not blind) three runs gave precision 1.00 and recall 0.94, 1.00, 0.94. No
+  hallucinated or historical value was extracted in any run. Small, author-written set: evidence
+  the approach works, not a benchmark. It sends text to the Anthropic API, so the README and
+  disclosures say so.
+- **The demo's `--llm` option was run against the real API** (`claude-haiku-5-5`): exit 0, empty
+  stderr, a correct one-sentence answer naming `CSR-VEL-01-r2` and the authority reason.
+- **A real-API finding the fake-client tests could not have caught:** the extraction model rejects a
+  forced `tool_choice`; fixed by not forcing it and failing loudly if the model does not call the
+  tool.
+- **Disclosures updated** to say the optional extraction tool and `--llm` call a Claude model at run
+  time and send text to the API.
+- Suite: 80 tests (79 pass without an API key, one live test is skipped).
+- **Still not done:** D1 and D2 (the narrated video and the Devpost entry are yours).
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |
