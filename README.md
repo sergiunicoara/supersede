@@ -74,7 +74,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 59 tests
+python -m pytest -q                          # 80 tests (79 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -141,8 +141,39 @@ Finished castings are packed {{packaging.units_per_box = 24}} to a box.
 python -m supersede.ingest examples/documents --db my-store.relate   # the path must not exist yet
 ```
 
-This reads facts that an author has marked; it does **not** extract facts from unannotated text.
-Programmatic use: `supersede.ingest.ingest_directory(store, folder)`.
+This reads facts that an author has marked; it does **not** extract facts from unannotated text on
+its own. Programmatic use: `supersede.ingest.ingest_directory(store, folder)`.
+
+### Extract facts from unannotated text (optional)
+
+For plain prose with no annotations, a language model can propose the facts, with guard rails:
+
+* The model may only use keys from a **vocabulary** you provide
+  ([examples/documents_raw/vocabulary.json](examples/documents_raw/vocabulary.json)).
+* Every fact must carry a **verbatim quote** from the document, and the value must appear in that
+  quote. Anything else is rejected and listed, and is never written.
+* Nothing touches a store. It writes an annotated **review copy** of each document; you check it,
+  then load it with `supersede.ingest` (which is deterministic).
+
+```bash
+pip install -e ".[llm]"            # the optional Anthropic SDK; set ANTHROPIC_API_KEY in your environment
+python -m supersede.extract examples/documents_raw --vocabulary examples/documents_raw/vocabulary.json --out review
+python -m supersede.ingest review --db extracted.relate
+```
+
+This sends the document text to the Anthropic API, so do not use it on confidential documents unless
+that is acceptable; the default install stays offline. Each document must still carry the small
+header (document id, authority, revision, dates).
+
+Measured live with `python eval/run_extraction_eval.py` on 8 fictional documents with 18 gold facts
+(written before any model was run; besides fixed prompt rules, the vocabulary is the only task guidance the model gets): the first run
+scored precision 0.67 and recall 0.67, and every miss was a value format (`2.5 bar` instead of
+`2.5`) that my vocabulary had not specified. After clarifying the value format in the vocabulary
+(a change informed by that first run), three runs scored precision 1.00 and recall 0.94, 1.00 and
+0.94; the one fact that varies is an ambiguous sentence the model sometimes declines to map. The
+model never extracted a historical or rejected value and never invented a fact, and the guard rails
+rejected nothing. This is a small, author-written set, so treat it as evidence that the approach
+works, not as a benchmark.
 
 ## Where the data lives
 
@@ -185,9 +216,11 @@ designed, so this shows behavior, not performance on real documents, which are m
 * **AI tools:** Claude (Anthropic), used through Claude Code, helped throughout: the code, tests,
   the fictional corpus and eval questions, the eval and baselines, the demo scripts and the screen
   capture of the demo, a repo audit, and the README, submission text and video script. The author
-  directed the design and is responsible for the result.
+  directed the design and is responsible for the result. Separately, the optional `supersede.extract`
+  tool and the demo's `--llm` flag call a Claude model at run time.
 * **Third-party:** Relate (`relate-db` 1.2.0, Apache-2.0) and the MCP Python SDK. Dev only:
-  pytest and PyYAML. Optional (`--llm` in the demo only): the Anthropic Python SDK.
+  pytest and PyYAML. Optional (the demo's `--llm` flag and `supersede.extract`): the Anthropic Python
+  SDK and the Anthropic API, to which those two features send text; the default path is offline.
 
 ## License
 

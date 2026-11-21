@@ -80,11 +80,28 @@ def parse(text: str, source: str = "<text>") -> Revision:
                     source, derived)
 
 
+def split_document(text: str, source: str = "<text>") -> tuple[str, str]:
+    """Split a document into (header block including both '---' lines, body)."""
+    lines = text.lstrip("\ufeff").replace("\r\n", "\n").split("\n")
+    if not lines or lines[0].strip() != "---":
+        raise ValueError(f"{source}: the file must start with a '---' header")
+    try:
+        end = lines.index("---", 1)
+    except ValueError:
+        raise ValueError(f"{source}: the header is not closed with '---'") from None
+    return "\n".join(lines[: end + 1]) + "\n", "\n".join(lines[end + 1:])
+
+
 def ingest_directory(store: Store, directory: str | os.PathLike) -> tuple[int, int, int]:
     """Load every ``*.md`` file in `directory`. Returns (documents, revisions, facts)."""
     revisions = [parse(p.read_text(encoding="utf-8"), p.name) for p in sorted(Path(directory).glob("*.md"))]
     if not revisions:
         raise ValueError(f"no *.md documents found in {directory}")
+    return load_revisions(store, revisions)
+
+
+def load_revisions(store: Store, revisions: list[Revision]) -> tuple[int, int, int]:
+    """Validate and load parsed revisions. Returns (documents, revisions, facts)."""
     authority: dict[str, tuple[int, str]] = {}
     seen: set[tuple[str, int]] = set()
     for r in revisions:
