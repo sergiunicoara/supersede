@@ -101,7 +101,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 126 tests (125 without an API key: one live test is skipped)
+python -m pytest -q                          # 137 tests (136 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```
@@ -217,14 +217,24 @@ model never extracted a historical or rejected value and never invented a fact, 
 rejected nothing. This is a small, author-written set, so treat it as evidence that the approach
 works, not as a benchmark.
 
-It also works on **real text**: [examples/real](examples/real/) holds two sections of the US Federal
-Acquisition Regulation at three dated versions each, from the public eCFR (public domain), in which
-dollar thresholds really changed ($5.5M, $6M, $7.5M and $7M, $7.5M, $9M). On the first, blind run
-the model got 13 of 15 gold facts (the two misses were `120 days or more` against `120 days`; no
-wrong fact). After I clarified the value format in the vocabulary (informed by that run), three runs
-got 15 of 15, and the graph built from the extracted facts gave the same answer as the gold graph for
-every one of the 15 (key, date) pairs, so supersession and as-of answers over a real history hold.
-It is only 6 documents on procurement compliance, not quality manufacturing.
+It also works on **real text**: [examples/real](examples/real/) holds 13 documents from the public eCFR
+(US federal regulations, public domain), including a **quality-manufacturing** history: FDA's device
+quality regulation, 21 CFR Part 820, in its 2016 Quality System Regulation and 2026 Quality Management
+System Regulation forms. A record-retention requirement ("no less than 2 years") that the 2016 text states
+is no longer stated in the 2026 text (it moved to ISO 13485, which is not in the CFR), so Supersede answers
+`2 years` for a date before 2026 and `unknown` today; a complaint-record item disappears; and the regulation
+renames itself. Two Federal Acquisition Regulation sections add dollar thresholds that really changed
+($5.5M, $6M, $7.5M and $7M, $7.5M, $9M).
+
+Measured live on the 13 documents (20 gold facts, written before any model ran; two documents are expected
+to give no facts, to check that the model does not add requirements the text does not state): on the first
+run the model got 17 of 20 facts right, added nothing that is not in the text, and extracted nothing from the
+two no-fact documents. The 3 misses were my own wording problems (the model copied "The dates and results of
+the investigation" with its capital "The", and read "quality system" for the name). After I clarified the
+vocabulary (informed by that run), three runs got 20 of 20, and the graph built from the extracted facts gave
+the same answer as the gold graph for all 48 (key, date) pairs. The FAR sections had the same pattern in an
+earlier run (13 of 15, then 15 of 15 three times). This is a small, author-chosen sample of 13 documents,
+not a benchmark.
 
 ## Where the data lives
 

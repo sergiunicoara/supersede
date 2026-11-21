@@ -1,4 +1,21 @@
 {
+  "CFR21-820-complaints_r1.md": {
+    "complaint_record.investigation_content": "dates and results of the investigation"
+  },
+  "CFR21-820-complaints_r2.md": {},
+  "CFR21-820-records_r1.md": {
+    "device_records.minimum_retention": "2 years"
+  },
+  "CFR21-820-records_r2.md": {},
+  "CFR21-820-scope_r1.md": {
+    "regulation_name.scope_title": "quality system regulation"
+  },
+  "CFR21-820-scope_r2.md": {
+    "regulation_name.scope_title": "quality system regulation"
+  },
+  "CFR21-820-scope_r3.md": {
+    "regulation_name.scope_title": "quality management system regulation (QMSR)"
+  },
   "FAR-13-000_r1.md": {
     "simplified_acquisition.commercial_ceiling": "$7 million",
     "simplified_acquisition.special_ceiling": "$13 million"

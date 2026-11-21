@@ -230,7 +230,7 @@ How to read it:
 * `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
   does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
   from one the author forgot to carry over.
-* The suite has 126 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
+* The suite has 137 tests (one live API test is skipped without a key), including edge cases (cycles, reused fact ids, missing ids, a 120-revision
   chain, a conflict inside one revision), the Markdown ingestion, a check that the MCP server leaves
   a store byte-identical, and one that runs the demo end to end over MCP.
 
@@ -302,26 +302,40 @@ equal-authority sources, using `answer_as_of` for a past date, flagging a stale 
 saying it does not know when no topic matches. In its last answer it misreads one tool result,
 which the file shows as is.
 
-### Real regulation text
+### Real regulation text, including quality manufacturing
 
-The corpus above is fictional, so I also ran the pipeline on **real** text: two sections of the US
-Federal Acquisition Regulation (48 CFR 13.000 and 3.1004) at three dated versions each, taken from the
-public eCFR (US government work, public domain; `examples/real/`). In them dollar thresholds really
-changed ($7M, $7.5M, $9M and $5.5M, $6M, $7.5M). I fetched the text myself from the eCFR API, checked
-that the intermediate versions I left out change wording but no figure, and wrote the expected facts
-before any model ran.
+The corpus above is fictional, so I also ran the pipeline on **real** text: 13 documents in 5 chains from the
+public eCFR (US federal regulations, public domain; `examples/real/`). The quality-manufacturing part is
+FDA's device quality regulation, 21 CFR Part 820, in its 2016 form (Quality System Regulation) and 2026 form
+(Quality Management System Regulation, which incorporates ISO 13485 by reference):
 
-| Run | Facts right (of 15) | Graph answers identical to gold, per (key, date) |
+* **A requirement that leaves the text.** 820.180(b) (2016) says records must be kept for the device's design
+  and expected life "but in no case less than 2 years". The 2026 text (820.35) states no period; it defers to
+  ISO 13485, a copyrighted standard that is not in the CFR text. Supersede answers `2 years` for a date before
+  2026 and `unknown` today. This is the "a revision replaces the whole previous one" choice on real data.
+* **A complaint-record item that disappears** ("the dates and results of the investigation").
+* **The regulation renames itself** across three versions of 820.1.
+* Two FAR sections add real dollar thresholds that changed ($5.5M, $6M, $7.5M and $7M, $7.5M, $9M).
+
+I fetched the text myself from the eCFR API, checked the versions I left out, and wrote the expected facts
+before any model ran. Two documents are expected to give no facts at all, which tests that the model does not
+add requirements the text does not state.
+
+| Run | Facts right (of 20) | Graph answers identical to gold, per (key, date) |
 |---|---|---|
-| 1: first, blind | 13 (precision 0.87, recall 0.87) | 13 of 15 |
-| 2 to 4: after clarifying the value format | 15, 15, 15 | 15 of 15, three times |
+| 1: first, blind for the new quality keys | 17 (precision 0.85, recall 0.85) | 38 of 48 |
+| 2 to 4: after clarifying the vocabulary | 20, 20, 20 | 48 of 48, three times |
 
-The two misses in run 1 were one phrase boundary (`120 days or more` instead of `120 days`), not a
-wrong fact; I then clarified the vocabulary, so runs 2 to 4 are informed by run 1. The guard rails
-rejected nothing, and no invented value appeared. Offline tests with the gold facts pin the real
-history: today's threshold, the threshold on past dates, and a requirement that never changed. Limits:
-6 documents, procurement compliance rather than quality manufacturing, and the earliest date of each
-section is the start of the eCFR's history window, not the original effective date.
+The model extracted nothing from the two no-fact documents and added no requirement that is not in the text
+(it did not recall the ISO 13485 retention rule). The three misses in run 1 were my own wording problems:
+it copied "The dates and results of the investigation" with its capital "The", where my gold lacked it, and it
+read "quality system" for the regulation's name where my gold had "quality system regulation". I clarified the
+vocabulary and left the gold unchanged, so runs 2 to 4 are informed by run 1. The FAR sections followed the same
+pattern earlier (13 of 15, then 15 of 15 three times). Offline tests pin the real history, including the
+requirement that leaves the text. Limits: 13 documents in 5 chains, an author-chosen sample; my mapping of the
+2026 section 820.35 as the successor of 820.180 and 820.198 is an interpretation (the text overlaps word for
+word, but it is not an official mapping); and the earliest date of each section is the start of the eCFR's
+history window, not the original effective date.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always
