@@ -154,3 +154,44 @@ def test_page_embeds_the_timeline_without_injecting_html(server):
     _, h, body = get(server, "/")
     assert b"Watch the answer change over time" in body and b'id="slider"' in body
     assert "img-src 'self'" in h["Content-Security-Policy"] and b"innerHTML" not in body
+
+
+# -- the animated picture in the README ------------------------------------------------------------
+
+ANIMATED = ROOT / "docs" / "img" / "timeline-final_inspection-sampling-animated.svg"
+DATES = ["2024-06-01", "2025-07-01", "2026-03-01"]
+
+
+def animated(store, dates=DATES, still=1):
+    return timeline.render_animated(store, "final_inspection", "sampling", dates, still=still)
+
+
+def test_animated_picture_has_one_frame_per_date_and_each_says_its_own_answer(committed):
+    root = ET.fromstring(animated(committed))
+    frames = [g for g in root if g.tag.endswith("}g")]
+    assert len(frames) == len(DATES)
+    said = ["".join(t.itertext()) for g in frames for t in g.iter("{http://www.w3.org/2000/svg}text")
+            if t.get("font-size") == "22"]
+    assert said == ["100% inspection", "AQL 1.0", "AQL 0.65"]  # same as the static frames: nothing is invented
+
+
+def test_animated_picture_shows_only_the_still_frame_when_animation_is_off(committed):
+    root = ET.fromstring(animated(committed, still=2))
+    assert [g.get("opacity") for g in root if g.tag.endswith("}g")] == ["0", "0", "1"]
+    assert "prefers-reduced-motion" in animated(committed)
+
+
+def test_animated_picture_uses_no_script_and_no_external_reference(committed):
+    text = animated(committed).lower()
+    assert "<script" not in text and "href" not in text and "onload" not in text
+
+
+def test_animated_picture_rejects_bad_arguments(committed):
+    with pytest.raises(ValueError):
+        timeline.render_animated(committed, "final_inspection", "sampling", [])
+    with pytest.raises(ValueError):
+        timeline.render_animated(committed, "final_inspection", "sampling", DATES, still=3)
+
+
+def test_committed_animated_picture_matches_the_store(committed):
+    assert ANIMATED.read_text(encoding="utf-8") == animated(committed)
