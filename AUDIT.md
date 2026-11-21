@@ -24,6 +24,27 @@ have", while the Rules say "New projects only". The Rules govern. Supersede is n
 
 ---
 
+**Update after the `eval-supersession` PR (D5).** Everything below describes the repo as audited
+(13-question eval). The eval has since been extended with three case types where supersession and
+effective dates disagree (missing date, mistyped date, dropped requirement), 6 new questions in 3
+new documents. Re-run with `python eval/run_eval.py` (15 documents, 25 revisions, 46 facts, 19
+questions):
+
+| Method | Total | Where it scores |
+|---|---|---|
+| Supersede | **19/19** | everything |
+| newest effective date (`eval/baseline.py`) | 9/19 | misses `authority` 2, `unresolved` 2, and all 6 date-case questions |
+| supersession-aware, authority-blind | 15/19 | gets all 6 date-case questions; misses `authority` 2 and `unresolved` 2 |
+| authority-aware, supersession-blind | 11/19 | gets all `authority`; misses `unresolved` 2 and all 6 date-case questions |
+
+So each part now earns something: `SUPERSEDES` is worth 6 questions beyond dates, authority 2, and
+tie detection 2. Two caveats: the date cases were **designed** to separate dates from `SUPERSEDES`
+(how common such metadata problems are in real corpora is unknown), and `withdrawn` rests on the
+"a revision replaces the whole previous one" modelling choice. The estimated "connected context" score
+in Part B was written before this and has not been re-scored.
+
+---
+
 ## Part A: Compliance checklist
 
 | # | Item | Status | Evidence |
@@ -71,7 +92,7 @@ about any specific entry.
 | Usefulness | **6** | Real problem, named user (quality and compliance teams). There is no ingestion: facts and links are entered through the `Store` API, and the corpus has 34 hand-made facts. | Load facts from documents, even a simple extractor over a few fictional procedure files. |
 | Completeness | **7** | Works end to end from a fresh clone in about 2 minutes: tests, MCP over stdio, scripted demo, eval. Missing on `main`: video, inspectable store, a working MCP-client config. The `Store` edge-case defects are in Part C. | Record the video, and merge this PR. |
 | Clarity | **7** | Clear README and submission text, Cypher shown verbatim with plain-language glosses, an honest results section. The README doesn't follow the overview's template headings (Use case / How it uses Relate: Mode, Why, What the graph models / Where the data lives). There is no diagram, and the video is pending. | Restructure the README to the overview template and add one graph diagram image. |
-| Effective use of connected context | **5** | Real Cypher traversals in embedded Relate with a persistent store. But the ablation in Part C shows that on the current 13 questions **`SUPERSEDES` adds nothing over newest-date** (both 9/13), and authority alone reaches 11/13. The graph is shallow (3 labels, 3 relationship types, chains of at most 3), and it uses no retrieval and not Relate's own MCP. | Add eval cases where supersession and effective dates disagree (back-dated corrections, future-effective drafts, a revocation), plus one cross-document reference chain, and report the ablation. |
+| Effective use of connected context | **5** | Real Cypher traversals in embedded Relate with a persistent store. But the ablation in Part C shows that on the 13 questions as audited **`SUPERSEDES` adds nothing over newest-date** (both 9/13), and authority alone reaches 11/13. The graph is shallow (3 labels, 3 relationship types, chains of at most 3), and it uses no retrieval and not Relate's own MCP. | Add eval cases where supersession and effective dates disagree (back-dated corrections, future-effective drafts, a revocation), plus one cross-document reference chain, and report the ablation. |
 
 **Estimated standing:**
 
@@ -111,7 +132,7 @@ resolution with tie detection are correct for well-formed input.
 - Suite on this branch: **26 passed, 6 xfailed** (32 tests). Proposed but not written: MCP tool
   error paths (bad arguments), and history ordering with forks.
 
-**Eval and baseline.** These are re-run numbers, using the value-only scoring in
+**Eval and baseline** (as audited, on the 13-question set; see the update above for the current numbers). These are re-run numbers, using the value-only scoring in
 `eval/run_eval.py`; the ablation script is ad hoc and not committed.
 
 | Baseline | Total | stale | authority | unresolved | agreed | unknown | chain |
@@ -180,7 +201,7 @@ Reading:
 | D2 | Devpost entry not submitted | **Disqualifying if missing** (deadline 11 Dec 2026, 6:00 PM PST) | all | Paste `SUBMISSION.md`, repo link, video link; keep the repo public with topic `relate` through 17 Dec | 30 min | You |
 | D3 | No inspectable store in the repo | High (overview checklist) | Connected context, docs | Committed `examples/store/supersede-demo.relate/`, README "Where the data lives", tests | done | **This PR** |
 | D4 | README MCP config serves an empty store | High | Completeness, reproducibility | Absolute paths, venv Python, a warning about relative `--db` | done | **This PR** |
-| D5 | Eval doesn't show what `SUPERSEDES` adds (ablation 9/13 = 9/13) | High | Connected context (30 on overview), creativity | Add realistic cases where supersession and dates disagree, plus a cross-document reference chain; publish the ablation table | 3-5 h | Needs your OK (design and claims) |
+| D5 | Eval doesn't show what `SUPERSEDES` adds (as audited: ablation 9/13 = 9/13) | High | Connected context (30 on overview), creativity | Add realistic cases where supersession and dates disagree, plus a cross-document reference chain; publish the ablation table | 3-5 h | **Done in the `eval-supersession` PR** (date cases and ablations; no cross-document reference chain yet) |
 | D6 | AI-use disclosure understates scope | High (Rules Section 3 requires it) | Eligibility | Say that code, tests, docs, corpus, eval, demo and submission text were AI-assisted | 5 min | Needs your OK (disclosure) |
 | D7 | `Store` defects: reused fid corrupts data, `None` authority crashes, history capped at 20, same-revision conflict missing, missing ids silent, cycles unguarded | Medium | Completeness | Validate inputs (fail on unknown ids, duplicate fid, non-int authority); raise or remove the cap; add a same-revision case | 1-2 h | Needs your OK (Store behavior); xfail tests are ready |
 | D8 | Server opens writable; a missing `--db` path creates a store | Medium | Completeness, connected context | `--read-only` flag (or default) and refuse a non-existent `--db` | 30 min | Needs your OK |

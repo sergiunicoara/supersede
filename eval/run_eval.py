@@ -10,7 +10,11 @@ Scoring
   Supersede: status must match; if a value is expected it must match; for `resolved` the
              source must equal expected_source; for `agreed` expected_source must be among
              the answer's sources.
-  Baseline:  scored on the VALUE only, which is generous to it (it has no status or reason):
+  Baselines: three, all scored the same way. "newest date" (eval/baseline.py: ignores SUPERSEDES and
+             authority) is the headline baseline. Two ablations each keep one part of the graph:
+             "supersession-aware" (skips superseded revisions, ignores authority) and
+             "authority-aware" (uses document authority, ignores SUPERSEDES).
+             Scored on the VALUE only, which is generous to it (it has no status or reason):
              - expected unknown    -> passes if it also finds nothing
              - expected unresolved -> never passes: it cannot report a disagreement, it always
                                       guesses one value
@@ -68,9 +72,12 @@ def evaluate(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[dict]:
         for q in questions:
             got = store.answer(q["subject"], q["predicate"])
             base = baseline.answer(docs, q["subject"], q["predicate"])
+            sup = baseline.answer_supersession_aware(docs, q["subject"], q["predicate"])
+            aut = baseline.answer_authority_aware(docs, q["subject"], q["predicate"])
             rows.append({
                 "q": q, "got": got, "base": base,
                 "ok": check_supersede(q, got), "base_ok": check_baseline(q, base),
+                "sup_ok": check_baseline(q, sup), "aut_ok": check_baseline(q, aut),
             })
     finally:
         store.close()
@@ -90,25 +97,30 @@ def main() -> int:
     d, r, f = counts(docs)
     rows = evaluate()
     print(f"Corpus: {d} documents, {r} revisions, {f} facts (fictional)\n")
-    print(f"{'id':<4} {'case':<11} {'question':<44} {'expected':<22} {'Supersede':<5} {'Baseline':<5}  baseline said")
+    print(f"{'id':<4} {'case':<13} {'question':<44} {'expected':<22} {'Supersede':<5} {'Baseline':<5}  baseline said")
     for x in rows:
         q = x["q"]
         exp = q["expected_status"] + (f": {q['expected_value']}" if "expected_value" in q else "")
         base_said = x["base"].get("value", x["base"]["status"])
-        print(f"{q['id']:<4} {q['case']:<11} {q['subject'] + ' / ' + q['predicate']:<44} {exp:<22} "
+        print(f"{q['id']:<4} {q['case']:<13} {q['subject'] + ' / ' + q['predicate']:<44} {exp:<22} "
               f"{'PASS' if x['ok'] else 'FAIL':<9} {'PASS' if x['base_ok'] else 'FAIL':<8}  {base_said}")
     by_case: "OrderedDict[str, list[int]]" = OrderedDict()
     for x in rows:
-        c = by_case.setdefault(x["q"]["case"], [0, 0, 0])
+        c = by_case.setdefault(x["q"]["case"], [0, 0, 0, 0, 0])
         c[0] += 1
         c[1] += x["ok"]
         c[2] += x["base_ok"]
-    n, s_ok, b_ok = len(rows), sum(x["ok"] for x in rows), sum(x["base_ok"] for x in rows)
-    print(f"\n{'case':<11} {'questions':>9} {'Supersede':>10} {'Baseline':>9}")
-    for case, (t, s, b) in by_case.items():
-        print(f"{case:<11} {t:>9} {s:>6}/{t:<3} {b:>5}/{t:<3}")
-    print(f"{'TOTAL':<11} {n:>9} {s_ok:>6}/{n:<3} {b_ok:>5}/{n:<3}")
+        c[3] += x["sup_ok"]
+        c[4] += x["aut_ok"]
+    n = len(rows)
+    s_ok, b_ok = sum(x["ok"] for x in rows), sum(x["base_ok"] for x in rows)
+    sup_ok, aut_ok = sum(x["sup_ok"] for x in rows), sum(x["aut_ok"] for x in rows)
+    print(f"\n{'case':<13} {'questions':>9} {'Supersede':>10} {'newest date':>12} {'supersession-aware':>19} {'authority-aware':>16}")
+    for case, (t, s, b, su, au) in by_case.items():
+        print(f"{case:<13} {t:>9} {s:>6}/{t:<3} {b:>8}/{t:<3} {su:>14}/{t:<4} {au:>12}/{t:<3}")
+    print(f"{'TOTAL':<13} {n:>9} {s_ok:>6}/{n:<3} {b_ok:>8}/{n:<3} {sup_ok:>14}/{n:<4} {aut_ok:>12}/{n:<3}")
     print(f"\nSupersede: {s_ok}/{n} passed.  Baseline (newest effective date, no graph): {b_ok}/{n} passed.")
+    print(f"Ablations: supersession-aware only {sup_ok}/{n}, authority-aware only {aut_ok}/{n}.")
     return 0 if s_ok == n else 1
 
 

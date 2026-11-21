@@ -16,7 +16,7 @@ def test_demo_session_runs_offline_end_to_end():
     out = r.stdout
     assert "'10 years'" in out and "unresolved" in out
     assert "QP-07-r3 replaced QP-07-r2, then QP-07-r1" in out
-    assert "Supersede 13/13" in out
+    assert "Supersede 19/19" in out and "naive baseline 9/19" in out
     assert "Traceback" not in out + r.stderr
 
 

@@ -1,0 +1,16 @@
+# FICTIONAL. r2 removes the permission to retest a failed part.
+id: WI-33
+title: Leak test station instruction
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2024-10-01"
+    facts:
+      - {id: F-WI33-1-1, subject: leak_test, predicate: retest_allowed, value: "once after reseating"}
+      - {id: F-WI33-1-2, subject: leak_test, predicate: pressure_bar, value: "2.5"}
+  - rev: 2
+    effective: "2025-08-12"
+    supersedes: 1
+    facts:
+      - {id: F-WI33-2-1, subject: leak_test, predicate: pressure_bar, value: "2.5"}

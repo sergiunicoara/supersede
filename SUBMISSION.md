@@ -110,9 +110,9 @@ The store (`Store`) wraps Relate with a small write API (add document, add revis
 assert fact) and the read queries above. The MCP server exposes the four tools using the MCP Python
 SDK. `examples/mcp_smoke.py` spawns the server over stdio and calls it the way an agent would.
 
-To test it beyond a handful of facts I wrote a fictional automotive-quality corpus (12 documents,
-19 revisions, 34 facts; `examples/corpus/`) with six deliberate cases (`CASES.md`), a 13-question
-eval (`eval/run_eval.py`), a naive baseline for comparison (`eval/baseline.py`), and a scripted
+To test it beyond a handful of facts I wrote a fictional automotive-quality corpus (15 documents,
+25 revisions, 46 facts; `examples/corpus/`) with nine deliberate cases (`CASES.md`), a 19-question
+eval (`eval/run_eval.py`), a naive baseline and two ablations for comparison (`eval/baseline.py`), and a scripted
 agent session that drives the MCP server end to end (`examples/demo_session.py`), which is what the
 demo video shows.
 
@@ -138,44 +138,64 @@ queries the store from a separate thread.
 * **Probe first.** `examples/probe_cypher.py` checks the Cypher features the design needs against
   Relate; all twelve probes pass, so the queries above rest on tested support, not assumed Neo4j
   parity.
-* **A baseline keeps you honest.** The naive baseline gets 9 of 13 questions right, including all
-  the stale-revision ones, because newest-wins is often correct. The graph earns its keep where
-  authority and disagreement matter, and the results below say exactly where.
+* **A baseline keeps you honest.** My first eval had a newest-date baseline at 9 of 13, and an
+  ablation showed that following `SUPERSEDES` added nothing over dates there, because every newer
+  revision was also newer by date. Real metadata is messier, so I added cases with missing, wrong
+  or irrelevant dates and re-ran everything. The results below say exactly where each part of the
+  graph helps.
 
 ## 7. Results
 
-Measured with `python eval/run_eval.py` on the fictional corpus (12 documents, 19 revisions,
-34 facts) and 13 questions, one or more per case (`examples/corpus/CASES.md`). Supersede answers
+Measured with `python eval/run_eval.py` on the fictional corpus (15 documents, 25 revisions,
+46 facts) and 19 questions, two or three per case (`examples/corpus/CASES.md`). Supersede answers
 through `Store.answer()`. The **naive baseline** (`eval/baseline.py`) ignores `SUPERSEDES` and
-authority and returns the fact from the most recent effective date across all documents.
+authority and returns the fact from the most recent effective date across all documents. Two
+**ablations** each keep one part of the graph: *supersession-aware* (skips superseded revisions,
+ignores authority) and *authority-aware* (uses document authority, ignores `SUPERSEDES`).
 
 ```
-case        questions  Supersede  Baseline
-stale               2      2/2       2/2
-authority           3      3/3       1/3
-unresolved          2      2/2       0/2
-agreed              2      2/2       2/2
-unknown             2      2/2       2/2
-chain               2      2/2       2/2
-TOTAL              13     13/13      9/13
+case          questions  Supersede  newest date  supersession-aware  authority-aware
+stale                 2      2/2          2/2                2/2               2/2
+authority             3      3/3          1/3                1/3               3/3
+unresolved            2      2/2          0/2                0/2               0/2
+agreed                2      2/2          2/2                2/2               2/2
+unknown               2      2/2          2/2                2/2               2/2
+chain                 2      2/2          2/2                2/2               2/2
+missing_date          2      2/2          0/2                2/2               0/2
+date_error            2      2/2          0/2                2/2               0/2
+withdrawn             2      2/2          0/2                2/2               0/2
+TOTAL                19     19/19         9/19              15/19             11/19
 ```
 
-**Supersede: 13/13. Baseline (newest effective date, no graph): 9/13.**
+**Supersede: 19/19. Baseline (newest effective date, no graph): 9/19. Ablations: following
+`SUPERSEDES` only 15/19; using authority only 11/19.**
 
 How to read it:
 
 * A Supersede answer is correct only if the status (`agreed`, `resolved`, `unresolved`, `unknown`),
   the value and the source revision all match. The baseline is scored on the value only, which is
   generous to it.
-* The baseline's two real errors are in `authority`: a lower-authority source is newer than the
+* The first six case types are the original set: there, a newer revision is always newer by date
+  too, so newest-date and following `SUPERSEDES` give the same answers, and the baseline gets the
+  `stale`, `agreed`, `unknown` and `chain` questions right.
+* The three new case types are about metadata that is missing, wrong or irrelevant: a revision with
+  a blank effective date (`missing_date`), an old revision whose date was mistyped as 2052
+  (`date_error`), and a newer revision that drops a requirement (`withdrawn`). Date-based methods
+  fail all six questions; following `SUPERSEDES` answers all six. **I designed these cases to
+  separate the two, and I do not know how often such metadata problems occur in real corpora.**
+* The baseline's two `authority` errors are a lower-authority source that is newer than the
   controlling one (a night-shift note beats a customer requirement on retention period; a work
-  instruction beats a customer requirement on paint film thickness).
-* Its two `unresolved` misses are by construction: it cannot report a disagreement, so it always
-  guesses one value.
-* It gets the `stale`, `agreed`, `unknown` and `chain` questions right. When the newest revision is
-  also the newest dated source, ignoring the graph costs nothing. The questions were not chosen to
-  hide that.
-* The suite has 18 tests, including one that runs the demo end to end over MCP.
+  instruction beats a customer requirement on paint film thickness). Authority alone fixes them.
+* Its two `unresolved` misses are by construction: no baseline can report a disagreement, so it
+  always guesses one value. Only Supersede reports it.
+* Each part of the graph earns something different: following `SUPERSEDES` is worth 6 of the 19
+  questions beyond dates, authority is worth 2, and tie detection is worth 2. Supersede is the only
+  one that answers all of them.
+* `withdrawn` rests on a modelling choice: a revision replaces the whole previous one, so a fact it
+  does not restate is not in force. Supersede cannot tell a deliberately withdrawn requirement
+  from one the author forgot to carry over.
+* The suite has 34 tests (28 pass, 6 expected failures that document known edge cases), including
+  one that runs the demo end to end over MCP.
 
 **Caveat:** all data is fictional and small, written for this repo. Real documents are messier:
 wording differs between documents, supersession is not always recorded, and authority is not always

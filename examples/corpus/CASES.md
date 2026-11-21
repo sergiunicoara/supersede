@@ -67,3 +67,36 @@ Expected: `unknown`.
 * `QP-18` (r1, r2, r3): `on_site_notice_days` is `30`, `14`, `7`.
 
 Expected: `agreed` with the value from r3 only. `revision_history("QP-07-r3")` lists r2 then r1.
+
+## Cases where supersession and effective dates disagree
+
+In the cases above, a newer revision is always also newer by date, so "newest date wins" and "follow
+`SUPERSEDES`" give the same answer. Real document metadata is not that tidy. The next three cases
+are about dates that are missing or wrong, or about a requirement a new revision drops. They test
+whether the answer comes from the revision chain, not from dates. Each has two questions.
+
+## Case `missing_date`: the newest revision has no effective date
+
+* `WI-31` r2 supersedes r1, but its effective date was left blank. `preheat_minutes` goes from `20`
+  to `30` and `max_basket_kg` from `250` to `300`.
+
+Expected: `agreed` with the r2 value. The date is blank, so a date-based method sorts r2 first
+(oldest) and returns the superseded r1 value.
+
+## Case `date_error`: an old revision has a wrong date that sorts it as the newest
+
+* `QP-22` r1 has the effective date `2052-01-15` (a transposed `2025`). r2, dated `2025-09-01`,
+  supersedes it. `head_bolt_torque` goes from `45 Nm` to `48 Nm` and `cover_bolt_torque` from
+  `22 Nm` to `24 Nm`.
+
+Expected: `agreed` with the r2 value. A date-based method trusts the typo and returns the
+superseded r1 value.
+
+## Case `withdrawn`: the newest revision drops a requirement
+
+* `WI-33` r2 no longer states `retest_allowed` (r1: `once after reseating`).
+* `QP-22` r2 no longer states `thread_locker` (r1: `required`).
+
+Expected: `unknown`. The data model treats a revision as replacing the whole previous one, so a fact
+that is not restated is not in force. This is a modelling choice: Supersede cannot tell a
+deliberately withdrawn requirement from one the author forgot to carry over (see AUDIT.md).

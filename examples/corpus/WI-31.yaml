@@ -1,0 +1,17 @@
+# FICTIONAL. The r2 cover page was issued without an effective date (field left blank).
+id: WI-31
+title: Furnace loading work instruction
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2024-11-04"
+    facts:
+      - {id: F-WI31-1-1, subject: furnace_loading, predicate: preheat_minutes, value: "20"}
+      - {id: F-WI31-1-2, subject: furnace_loading, predicate: max_basket_kg, value: "250"}
+  - rev: 2
+    effective: ""
+    supersedes: 1
+    facts:
+      - {id: F-WI31-2-1, subject: furnace_loading, predicate: preheat_minutes, value: "30"}
+      - {id: F-WI31-2-2, subject: furnace_loading, predicate: max_basket_kg, value: "300"}
