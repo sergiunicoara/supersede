@@ -1,0 +1,17 @@
+# FICTIONAL.
+id: WI-21
+title: Paint line setup sheet
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2024-06-03"
+    facts:
+      - {id: F-WI21-1-1, subject: paint_line, predicate: cure_time_min, value: "40"}
+      - {id: F-WI21-1-2, subject: paint_line, predicate: film_thickness_um, value: "55-75"}
+  - rev: 2
+    effective: "2025-02-10"
+    supersedes: 1
+    facts:
+      - {id: F-WI21-2-1, subject: paint_line, predicate: cure_time_min, value: "35"}
+      - {id: F-WI21-2-2, subject: paint_line, predicate: film_thickness_um, value: "60-80"}

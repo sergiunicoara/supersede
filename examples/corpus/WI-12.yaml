@@ -1,0 +1,10 @@
+# FICTIONAL.
+id: WI-12
+title: Casting line shift work instruction
+kind: work instruction
+authority: 2
+revisions:
+  - rev: 1
+    effective: "2025-06-01"
+    facts:
+      - {id: F-WI12-1-1, subject: final_inspection, predicate: sampling, value: "100% inspection"}

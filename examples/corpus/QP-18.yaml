@@ -1,0 +1,23 @@
+# FICTIONAL.
+id: QP-18
+title: Supplier audit procedure
+kind: controlled procedure
+authority: 3
+revisions:
+  - rev: 1
+    effective: "2023-10-01"
+    facts:
+      - {id: F-QP18-1-1, subject: supplier_audit, predicate: frequency, value: "every 3 years"}
+      - {id: F-QP18-1-2, subject: supplier_audit, predicate: on_site_notice_days, value: "30"}
+  - rev: 2
+    effective: "2024-06-01"
+    supersedes: 1
+    facts:
+      - {id: F-QP18-2-1, subject: supplier_audit, predicate: frequency, value: "every 2 years"}
+      - {id: F-QP18-2-2, subject: supplier_audit, predicate: on_site_notice_days, value: "14"}
+  - rev: 3
+    effective: "2025-08-01"
+    supersedes: 2
+    facts:
+      - {id: F-QP18-3-1, subject: supplier_audit, predicate: frequency, value: "annual"}
+      - {id: F-QP18-3-2, subject: supplier_audit, predicate: on_site_notice_days, value: "7"}

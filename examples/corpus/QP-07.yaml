@@ -1,0 +1,23 @@
+# FICTIONAL. Invented procedure of the invented supplier Brannock Castings Ltd.
+id: QP-07
+title: Final inspection procedure
+kind: controlled procedure
+authority: 3
+revisions:
+  - rev: 1
+    effective: "2024-01-10"
+    facts:
+      - {id: F-QP07-1-1, subject: final_inspection, predicate: sampling, value: "100% inspection"}
+      - {id: F-QP07-1-2, subject: final_inspection, predicate: record_retention, value: "2 years"}
+  - rev: 2
+    effective: "2025-03-01"
+    supersedes: 1
+    facts:
+      - {id: F-QP07-2-1, subject: final_inspection, predicate: sampling, value: "AQL 1.0"}
+      - {id: F-QP07-2-2, subject: final_inspection, predicate: record_retention, value: "3 years"}
+  - rev: 3
+    effective: "2025-11-01"
+    supersedes: 2
+    facts:
+      - {id: F-QP07-3-1, subject: final_inspection, predicate: sampling, value: "AQL 0.65"}
+      - {id: F-QP07-3-2, subject: final_inspection, predicate: record_retention, value: "5 years"}
