@@ -130,6 +130,25 @@ D11 (README structure), D12 (ingestion), D15 (Python 3.10, macOS, Linux untested
 
 ---
 
+**Update after the `real-hierarchy` PR (a real authority hierarchy).**
+
+- Tests the authority mechanism on a **real** hierarchy: FDA's non-binding 2016 guidance *Medical Device Reporting for
+  Manufacturers* (authority 2, excerpted) against the regulation it explains (authority 4). The guidance still cites
+  21 CFR 820.198, removed in 2026. A research agent found it; **I re-checked the regulation text from the eCFR API, and
+  extracted the guidance PDF text myself and confirmed each excerpted passage** (it also corrected a date in the agent's
+  report: the 803.18(e) wording changed in the 2026-02-02 version, not 2025-12-04).
+- Offline tests pin it: today the regulation wins and the guidance is overruled; for earlier dates the guidance is the
+  statement in force; the guidance is flagged as written from replaced revisions; "2 years" against "two years" is
+  settled by authority, not recognised as agreement (a known limit, on real data).
+- Live extraction (29 gold facts): blind first run on the new keys 24 of 27 (two gold errors of mine, one overlong value
+  caught by the guard rails); after gold corrections and clearer wording (informed) three runs of 27 of 29 with no wrong
+  fact; the 2 misses are string boundaries, not tuned further.
+- Limit stated everywhere: statute > regulation > guidance is a real hierarchy but not a plant's own tiers
+  (customer requirement > procedure > work instruction > shift note), and shift notes and emails remain untested on real
+  data. Suite: 143 tests (142 without an API key).
+
+---
+
 **Update after the `real-quality` PR (real quality-manufacturing documents).**
 
 - `examples/real/` now also holds **21 CFR Part 820**, FDA's medical-device quality regulation, in its 2016
