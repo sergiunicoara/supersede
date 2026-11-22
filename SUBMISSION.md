@@ -72,7 +72,7 @@ MATCH (t:Topic) SEARCH t IN (VECTOR INDEX topic_vec FOR $v LIMIT 10) SCORE AS sc
 store, also opened read-only; `MERGE`; `NOT (...)` pattern predicates; unbounded variable-length paths
 (`[:SUPERSEDES*1..]`, `[:DERIVED_FROM*1..]`, `*0..` for cycle checks); multi-`MATCH` joins; a **full-text index**
 and a **vector index** (`CREATE FULLTEXT INDEX`, `CREATE VECTOR INDEX`, `SEARCH ... SCORE AS`) that persist in the
-store and work on a read-only open, fused by reciprocal rank in Python (Relate's `COMBINE` is preview). Relate does
+store and work on a read-only open, fused by reciprocal rank in Python by default; Relate's own `COMBINE` (a preview feature) is an opt-in and measured slightly worse here. Relate does
 not compute embeddings; Supersede uses a small dependency-free hashing embedder (word forms and typos, not true
 synonyms). **Not used:** Relate's own MCP
 server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools instead.
@@ -84,7 +84,7 @@ Relate connections are thread-affine but an MCP server calls tools from worker t
 work on one dedicated thread. Writes are strict: unknown ids, a reused fact id, a non-integer authority or a cycle
 raise instead of silently doing nothing. Documents load from annotated Markdown, and an optional extraction tool
 proposes facts from plain prose, with guard rails (a fixed vocabulary, a verbatim quote that must appear in the
-text, rejections listed and never written, and a human-review copy). The suite has 173 tests, and CI runs on
+text, rejections listed and never written, and a human-review copy). The suite has 176 tests, and CI runs on
 Linux, macOS and Windows with Python 3.10 to 3.13.
 
 ## Does it work? The numbers, and how to read them

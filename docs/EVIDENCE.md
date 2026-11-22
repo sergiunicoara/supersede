@@ -71,12 +71,17 @@ less, a thin margin. I had seen two of the off-topic scores from the evaluation 
 |---|---|---|---|
 | full-text only (BM25) | 23 | 15 | 38 |
 | vector only (hashing embedder) | 21 | 18 | 39 |
-| **hybrid (default, reciprocal rank fusion)** | **23** | **16** | **39** |
+| **hybrid (default, my reciprocal rank fusion)** | **23** | **16** | **39** |
+| Relate's own `COMBINE` (preview, opt-in) | 21 | 16 | 37 |
 
 Read it modestly: the gaps are one or two questions. Full-text misses word forms ("calibrate" against
 "calibration", "thick" against "thickness"); the vector index misses a true synonym ("bake" against "cure"), which a
 hashing embedder cannot know. Hybrid is never worse than full-text on either set, ties vector overall, and its two
-misses are different from vector's. A trained embedding model would help with synonyms and is not included.
+misses are different from vector's. Relate's own `COMBINE` (weighted reciprocal rank fusion, `RELATE_PREVIEW=hybrid-search`,
+`Store(combine=True)`) was added as an opt-in and scores 37: it fuses all ten vector hits, including weak ones, while my fusion
+first drops vector hits below the calibrated threshold, so on this corpus the Python fusion is slightly better. `COMBINE` has
+no minimum score, so the same threshold gates its results. A trained embedding model would help with synonyms and is not
+included.
 
 13 "what was in force on this date" questions, including the mistyped-date and missing-date documents:
 **Supersede 13/13** against 11/13 for "the newest fact dated on or before that day". Effective dates are taken at

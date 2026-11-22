@@ -404,3 +404,5 @@ typos, not synonyms; pluggable). Measured honestly in `docs/EVIDENCE.md`: hybrid
 16/18 on 18 reworded ones, against 23 and 15 for full-text and 21 and 18 for vector-only: a modest, not decisive,
 difference. Threshold chosen on a separate calibration set; the earlier "vector search not used" statements are removed.
 Suite 168 (167 without a key) at that PR; 173 (172) after the animated-picture PR.
+
+**Update after the `relate-combine` PR.** Relate's own `COMBINE` hybrid search (preview, `RELATE_PREVIEW=hybrid-search`) is an opt-in (`Store(combine=True)`); it scores 37/41 against 39/41 for the default Python fusion, because it cannot drop weak vector hits before fusing. Reported in `docs/EVIDENCE.md`. Suite 176 (175 without a key).

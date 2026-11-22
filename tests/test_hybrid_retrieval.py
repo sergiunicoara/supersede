@@ -107,3 +107,37 @@ def test_retrieval_comparison_hybrid_is_never_worse_than_full_text_on_the_origin
     assert len(variants) == 18
     assert sum(x["ok"] for x in variants) >= sum(x["ok"] for x in run_eval.evaluate_retrieval(
         section="retrieval_variants", mode="fulltext"))
+
+
+# -- Relate's own COMBINE (preview feature, opt-in) ------------------------------------------------
+
+
+def test_combine_needs_the_opt_in_and_says_so():
+    s = small()
+    try:
+        with pytest.raises(ValueError, match="combine=True"):
+            s.ask("How often are gauges recalibrated?", retrieval="combine")
+    finally:
+        s.close()
+
+
+def test_combine_answers_through_relates_own_fusion():
+    s = Store(combine=True)
+    try:
+        s.add_topic("gauge_calibration", "interval", "How often gauges are recalibrated, the calibration interval")
+        s.add_topic("retained_sample", "retention_period", "How long retained samples are kept")
+        got = s.ask("How often are gauges recalibrated?", retrieval="combine")
+        assert got["matched"]["subject"] == "gauge_calibration"
+        assert got["matched"]["via"]["mode"] == "combine"
+        assert got["matched"]["via"]["fulltext_rank"] == 1 and got["matched"]["via"]["vector_score"] is not None
+        assert s.ask("What time does the cafeteria open?", retrieval="combine")["status"] == "no_match"
+        # the default is still my own fusion, and it works on the same store
+        assert s.ask("How often are gauges recalibrated?")["matched"]["via"]["mode"] == "hybrid"
+    finally:
+        s.close()
+
+
+def test_combine_runs_on_both_question_sets_but_is_reported_not_gated():
+    # Its score is published in docs/EVIDENCE.md next to the other modes; no threshold is asserted on purpose.
+    assert len(run_eval.evaluate_retrieval(mode="combine")) == 23
+    assert len(run_eval.evaluate_retrieval(section="retrieval_variants", mode="combine")) == 18

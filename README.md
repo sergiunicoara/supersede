@@ -123,7 +123,8 @@ commit, close); a persistent directory store, also opened `read_only=True`; `MER
 `*0..` for the cycle checks) with `length(p)`; multi-`MATCH` joins; `ORDER BY` and `count()`; a
 **full-text index** (`CREATE FULLTEXT INDEX`) and **vector index** (`CREATE VECTOR INDEX`, cosine) queried with
 `SEARCH ... SCORE AS`, which persist in the directory store and work on a read-only open; the two result lists are
-fused in Python because Relate's own `COMBINE` hybrid is still a preview feature. Relate does not compute
+fused in Python by default; Relate's own `COMBINE` hybrid is a preview feature and is available as an opt-in
+(`Store(combine=True)`, `ask(retrieval="combine")`), measured in [docs/EVIDENCE.md](docs/EVIDENCE.md). Relate does not compute
 embeddings, so Supersede supplies them. **Not used:** Relate's own MCP server, the CLI, Bolt or HTTP, WebAssembly. Supersede ships its own MCP server with domain tools
 instead.
 
@@ -137,7 +138,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 173 tests (172 without an API key: one live test is skipped)
+python -m pytest -q                          # 176 tests (175 without an API key: one live test is skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```

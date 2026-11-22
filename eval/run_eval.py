@@ -103,9 +103,9 @@ def evaluate_lineage(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[di
     return rows
 
 
-def _loaded(corpus_dir) -> tuple[list[dict], Store]:
+def _loaded(corpus_dir, combine: bool = False) -> tuple[list[dict], Store]:
     docs = read_corpus(corpus_dir)
-    store = Store()
+    store = Store(combine=combine)
     load_docs(store, docs, read_topics(corpus_dir))
     return docs, store
 
@@ -135,7 +135,7 @@ def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS, section=
     """Plain-language questions through ask(). Compares Relate hybrid retrieval + graph reasoning with
     (a) the same retrieval answered by newest date and (b) name-overlap retrieval answered by newest date."""
     items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get(section, [])
-    docs, store = _loaded(corpus_dir)
+    docs, store = _loaded(corpus_dir, combine=mode == "combine")
     keys = sorted(read_topics(corpus_dir))
     rows = []
     try:
