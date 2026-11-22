@@ -237,3 +237,9 @@ def test_agreed_answers_name_their_sources_and_the_browser_gets_no_favicon_error
     page = get(server, "/")[2].decode("utf-8")
     assert "a.sources" in page  # an agreed answer has `sources`, not `source`: no 'from undefined'
     assert get(server, "/favicon.ico")[0] == 204
+
+
+def test_page_explains_a_refusal_instead_of_leaving_it_looking_like_a_bug(server):
+    page = get(server, "/")[2].decode("utf-8")
+    assert "That is deliberate" in page and "instead of guessing" in page
+    assert json.loads(get(server, "/api/ask?q=Who%20is%20the%20plant%20manager%3F")[2])["status"] == "no_match"

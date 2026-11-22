@@ -40,7 +40,7 @@ EXAMPLES = [
     {"q": "Which form do inspectors fill in for final inspection results?"},
     {"q": "After how many parts do we swap the cutting tools in the machining cell?"},
     {"q": "What torque do we use on the cylinder head bolts?", "as_of": "2025-08-01"},
-    {"q": "Who is the plant manager?"},
+    {"q": "Who is the plant manager?"},  # not in any document: shows the refusal
 ]
 
 PAGE = """<!doctype html>
@@ -84,7 +84,7 @@ function line(parent,text,cls){const p=el('div',cls||'',text);parent.appendChild
 function render(r){
   const out=$('out');out.textContent='';const c=el('div','card');out.appendChild(c);
   if(r.error){line(c,r.error,'bad');return}
-  if(r.status==='no_match'||r.status==='no_topics'){line(c,'No answer: '+r.reason,'warn');return}
+  if(r.status==='no_match'||r.status==='no_topics'){line(c,'No answer: '+r.reason,'warn');line(c,'That is deliberate. Supersede only answers from the documents it holds, and none of them covers this question, so it says so instead of guessing.','mut');return}
   const a=r.answer,m=r.matched;
   line(c,'Topic: '+m.subject+' / '+m.predicate,'mut');line(c,m.description,'mut');
   const st=el('div','');st.appendChild(el('span','tag',a.status));if(a.as_of)st.appendChild(el('span','tag','as of '+a.as_of));c.appendChild(st);
