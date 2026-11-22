@@ -195,3 +195,45 @@ def test_animated_picture_rejects_bad_arguments(committed):
 
 def test_committed_animated_picture_matches_the_store(committed):
     assert ANIMATED.read_text(encoding="utf-8") == animated(committed)
+
+
+# -- the live answer line next to the slider ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("day, status, value", [
+    ("2024-06-01", "agreed", "100% inspection"),
+    ("2025-07-01", "resolved", "AQL 1.0"),
+    ("2026-03-01", "resolved", "AQL 0.65"),
+])
+def test_answer_endpoint_gives_the_value_in_force_on_that_day(server, day, status, value):
+    code, h, body = get(server, f"/api/answer?key=final_inspection.sampling&as_of={day}")
+    got = json.loads(body)
+    assert code == 200 and h["Content-Type"].startswith("application/json")
+    assert (got["status"], got["value"]) == (status, value)
+
+
+def test_answer_endpoint_reports_what_it_overruled(server):
+    got = json.loads(get(server, "/api/answer?key=final_inspection.sampling&as_of=2025-07-01")[2])
+    assert [o["rev"] for o in got["overruled"]] == ["WI-12-r1"]
+
+
+@pytest.mark.parametrize("path", [
+    "/api/answer", "/api/answer?key=nodot", "/api/answer?key=a;b",
+    "/api/answer?key=final_inspection.sampling&as_of=2025-13-40",
+    "/api/answer?key=final_inspection.sampling&as_of=yesterday",
+])
+def test_bad_answer_requests_are_400_not_crashes(server, path):
+    assert get(server, path)[0] == 400
+
+
+def test_page_has_the_live_line_and_writes_it_as_text_only(server):
+    page = get(server, "/")[2].decode("utf-8")
+    assert 'id="live"' in page and "showLive" in page
+    live_fn = page[page.index("async function showLive"):page.index("function showTl")]
+    assert "innerHTML" not in live_fn  # server values are put in with textContent only
+
+
+def test_agreed_answers_name_their_sources_and_the_browser_gets_no_favicon_error(server):
+    page = get(server, "/")[2].decode("utf-8")
+    assert "a.sources" in page  # an agreed answer has `sources`, not `source`: no 'from undefined'
+    assert get(server, "/favicon.ico")[0] == 204

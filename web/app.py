@@ -8,6 +8,7 @@ committed FICTIONAL demo store, opened read-only. No accounts, no API keys, no w
 
 GET /                      the page
 GET /api/ask?q=...&as_of=  the same result as Store.ask(), as JSON (as_of is optional, YYYY-MM-DD)
+GET /api/answer?key=subject.predicate&as_of=   the value in force for one key (as_of optional), as JSON
 GET /api/examples          sample questions
 GET /healthz               "ok"
 """
@@ -72,6 +73,7 @@ ul{margin:.4em 0;padding-left:1.2em}footer{margin:24px 0;color:var(--mut);font-s
 <h2 style="font-size:1.1rem;margin:28px 0 4px">Watch the answer change over time</h2>
 <p class="sub" style="margin:0 0 4px">Pick a question and drag the date. Each bar is a revision, colour is authority, the gold outline is the value in force that day.</p>
 <div class="tlbar"><select id="key" aria-label="Question"></select><input id="slider" type="range" min="0" max="1" value="0" aria-label="Date"><span id="dlabel" class="tag"></span></div>
+<div id="live" class="card" aria-live="polite"></div>
 <img id="tl" alt="Timeline of the revisions in force" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff">
 <footer>All data is fictional. Read-only; nothing you type is stored. Retrieval is Relate's full-text and vector indexes; the answer comes from the graph
 (supersession, authority, ties, dates). Source: <a href="https://github.com/sergiunicoara/supersede">github.com/sergiunicoara/supersede</a>.</footer>
@@ -105,7 +107,20 @@ async function ask(q,d){
 }
 const TL={min:null};
 function addDays(d,n){const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
-function showTl(){const d=addDays(TL.min,+$('slider').value);$('dlabel').textContent=d;$('tl').src='/api/timeline.svg?key='+encodeURIComponent($('key').value)+'&as_of='+d}
+let liveN=0;
+async function showLive(key,d){
+  const n=++liveN,c=$('live');
+  let a;try{a=await (await fetch('/api/answer?key='+encodeURIComponent(key)+'&as_of='+d)).json()}catch(e){return}
+  if(n!==liveN)return;  /* a newer drag already replaced this one */
+  c.textContent='';
+  const t=a.status==='unknown'?'Nothing in force on '+d:a.status==='unresolved'?'Unresolved on '+d+': equal-authority sources disagree':'In force on '+d+': '+a.value;
+  c.appendChild(el('div','big '+(a.status==='unresolved'?'warn':'ok'),t));
+  const src=a.source||(a.sources||[]).join(', ');const why=a.status==='resolved'?a.reason+' (from '+src+')':a.status==='agreed'?'from '+src:'';
+  if(why)c.appendChild(el('div','mut',why));
+  (a.overruled||[]).forEach(o=>c.appendChild(el('div','mut','overruled: '+o.value+' ('+o.rev+', authority '+o.authority+')')));
+  (a.candidates||[]).forEach(o=>c.appendChild(el('div','mut','candidate: '+o.value+' ('+o.rev+', authority '+o.authority+')')));
+}
+function showTl(){const d=addDays(TL.min,+$('slider').value);$('dlabel').textContent=d;showLive($('key').value,d);$('tl').src='/api/timeline.svg?key='+encodeURIComponent($('key').value)+'&as_of='+d}
 async function loadKey(){const r=await (await fetch('/api/timeline.json?key='+encodeURIComponent($('key').value))).json();TL.min=r.min;const s=$('slider');s.max=r.days;s.value=r.start;showTl()}
 fetch('/api/keys').then(r=>r.json()).then(list=>{const sel=$('key');list.forEach(k=>{const o=el('option','',k.subject+' / '+k.predicate);o.value=k.key;sel.appendChild(o)});
   if(list.some(k=>k.key==='final_inspection.sampling'))sel.value='final_inspection.sampling';if(list.length)loadKey()});
@@ -154,6 +169,8 @@ class Handler(BaseHTTPRequestHandler):
             csp = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
                    "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
             self._send(200, PAGE.encode("utf-8"), "text/html; charset=utf-8", {"Content-Security-Policy": csp})
+        elif url.path == "/favicon.ico":  # browsers ask for it; there is none, and a 404 only clutters the console
+            self._send(204, b"", "image/x-icon")
         elif url.path == "/healthz":
             self._send(200, b"ok", "text/plain; charset=utf-8")
         elif url.path == "/api/examples":
@@ -182,6 +199,16 @@ class Handler(BaseHTTPRequestHandler):
             svg = timeline.render_svg(get_store(), subject, predicate, as_of)
             self._send(200, svg.encode("utf-8"), "image/svg+xml; charset=utf-8",
                        {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+        elif url.path == "/api/answer":
+            qs = parse_qs(url.query)
+            key = (qs.get("key", [""])[0]).strip()
+            as_of = (qs.get("as_of", [""])[0]).strip() or None
+            if not KEY.match(key) or len(key) > 120:
+                return self._json(400, {"error": "key must look like subject.predicate"})
+            if as_of is not None and (not DATE.match(as_of) or Store._day(as_of) is None):
+                return self._json(400, {"error": "as_of must be a date like 2025-07-01"})
+            subject, predicate = key.split(".", 1)
+            self._json(200, get_store().answer(subject, predicate, as_of=as_of))
         elif url.path == "/api/ask":
             qs = parse_qs(url.query)
             q = (qs.get("q", [""])[0]).strip()

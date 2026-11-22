@@ -153,7 +153,7 @@ python eval/run_eval.py                      # 19 questions: Supersede vs a naiv
   `revision_history`. Offline; add `--pause` to slow it down, or `--llm` (needs the `llm` extra and
   `ANTHROPIC_API_KEY`) to have a model phrase the first answer in one sentence from the tool's JSON.
 * `python web/app.py` serves a read-only page over the committed store (standard library only, no keys, no writes):
-  ask a question, or pick one and **drag the date slider** to watch the timeline and the answer change. It ships as a
+  ask a question, or pick one and **drag the date slider** to watch the timeline and the answer change (a large line under the slider states what is in force that day). It ships as a
   Docker image; it is live at https://supersede-demo.onrender.com, and hosting it is in [docs/DEPLOY.md](docs/DEPLOY.md).
 * `python examples/agent_demo.py` lets a Claude model use the MCP server with no script (needs
   `pip install -e ".[llm]"` and `ANTHROPIC_API_KEY`; it sends the questions and fictional tool results to the API).
