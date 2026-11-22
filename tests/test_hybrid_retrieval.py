@@ -141,3 +141,20 @@ def test_combine_runs_on_both_question_sets_but_is_reported_not_gated():
     # Its score is published in docs/EVIDENCE.md next to the other modes; no threshold is asserted on purpose.
     assert len(run_eval.evaluate_retrieval(mode="combine")) == 23
     assert len(run_eval.evaluate_retrieval(section="retrieval_variants", mode="combine")) == 18
+
+
+# -- an embedder can carry its own calibrated threshold ---------------------------------------------
+
+
+def test_an_embedder_can_set_its_own_minimum_vector_score():
+    class Strict(HashingEmbedder):
+        min_score = 0.99  # nothing but an identical text passes
+
+    s = Store(embedder=Strict())
+    try:
+        s.add_topic("gauge_calibration", "interval", "How often gauges are recalibrated, the calibration interval")
+        assert s._min_vector_score() == 0.99
+        got = s.ask("How often do we calibrate a gauge?", retrieval="vector")
+        assert got["status"] == "no_match"
+    finally:
+        s.close()

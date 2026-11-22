@@ -406,3 +406,5 @@ difference. Threshold chosen on a separate calibration set; the earlier "vector 
 Suite 168 (167 without a key) at that PR; 173 (172) after the animated-picture PR.
 
 **Update after the `relate-combine` PR.** Relate's own `COMBINE` hybrid search (preview, `RELATE_PREVIEW=hybrid-search`) is an opt-in (`Store(combine=True)`); it scores 37/41 against 39/41 for the default Python fusion, because it cannot drop weak vector hits before fusing. Reported in `docs/EVIDENCE.md`. Suite 176 (175 without a key).
+
+**Update after the `model-embedder` PR.** An optional trained embedding model (`supersede[embed]`, fastembed, `BAAI/bge-small-en-v1.5`) sits behind the embedder interface, with its own threshold calibrated on the separate calibration set. On a 20-question synonym set written before the model was run: vector-only 19/20, hybrid 18/20, `COMBINE` 18/20, against 14/20 for the default hashing embedder with hybrid. The first two question sets are informed, not blind (said in `docs/EVIDENCE.md`). The live demo keeps the hashing embedder. Suite 180 (176 on a plain install).

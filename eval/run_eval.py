@@ -103,9 +103,9 @@ def evaluate_lineage(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS) -> list[di
     return rows
 
 
-def _loaded(corpus_dir, combine: bool = False) -> tuple[list[dict], Store]:
+def _loaded(corpus_dir, combine: bool = False, embedder=None) -> tuple[list[dict], Store]:
     docs = read_corpus(corpus_dir)
-    store = Store(combine=combine)
+    store = Store(combine=combine, embedder=embedder)
     load_docs(store, docs, read_topics(corpus_dir))
     return docs, store
 
@@ -131,11 +131,12 @@ def _baseline_value_ok(q: dict, key: str | None, docs: list[dict]) -> bool:
     return check_baseline(q, baseline.answer(docs, subject, predicate))
 
 
-def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS, section="retrieval", mode="hybrid") -> list[dict]:
+def evaluate_retrieval(corpus_dir=CORPUS_DIR, questions_path=QUESTIONS, section="retrieval", mode="hybrid",
+                       embedder=None) -> list[dict]:
     """Plain-language questions through ask(). Compares Relate hybrid retrieval + graph reasoning with
     (a) the same retrieval answered by newest date and (b) name-overlap retrieval answered by newest date."""
     items = yaml.safe_load(pathlib.Path(questions_path).read_text(encoding="utf-8")).get(section, [])
-    docs, store = _loaded(corpus_dir, combine=mode == "combine")
+    docs, store = _loaded(corpus_dir, combine=mode == "combine", embedder=embedder)
     keys = sorted(read_topics(corpus_dir))
     rows = []
     try:

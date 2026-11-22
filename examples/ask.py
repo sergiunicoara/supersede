@@ -3,6 +3,7 @@
     python examples/ask.py "How long must retained samples be kept?"
     python examples/ask.py "What sampling rule applied?" --as-of 2025-07-01
     python examples/ask.py "After how many parts do we change tools?" --db path/to/store.relate
+    python examples/ask.py "How long does the paint have to bake?" --embedder model --retrieval vector   # synonyms
 
 Relate's full-text and vector indexes (hybrid retrieval) find the topic; the graph decides the value (supersession, authority,
 ties, dates). The default store is the committed demo store, opened read-only.
@@ -61,12 +62,24 @@ def main() -> int:
     ap.add_argument("question")
     ap.add_argument("--as-of", metavar="YYYY-MM-DD", help="answer for that date instead of today")
     ap.add_argument("--db", default=str(DEFAULT_DB), help="existing store (default: the committed demo store)")
+    ap.add_argument("--retrieval", choices=("hybrid", "fulltext", "vector"), default="hybrid",
+                    help="how the topic is found (default: hybrid)")
+    ap.add_argument("--embedder", choices=("hash", "model"), default="hash",
+                    help="'model' builds an in-memory store from the corpus with a trained embedding model "
+                         "(needs: pip install fastembed; downloads the model once) so synonyms work")
     args = ap.parse_args()
-    if not pathlib.Path(args.db).exists():
-        ap.error(f"store not found: {args.db}")
-    store = Store(args.db, read_only=True)
+    if args.embedder == "model":
+        sys.path.insert(0, str(ROOT / "examples"))
+        from load_corpus import CORPUS_DIR, load_docs, read_corpus, read_topics
+        from supersede.embed_model import FastEmbedEmbedder
+        store = Store(embedder=FastEmbedEmbedder())
+        load_docs(store, read_corpus(CORPUS_DIR), read_topics(CORPUS_DIR))
+    else:
+        if not pathlib.Path(args.db).exists():
+            ap.error(f"store not found: {args.db}")
+        store = Store(args.db, read_only=True)
     try:
-        show(store.ask(args.question, as_of=args.as_of))
+        show(store.ask(args.question, as_of=args.as_of, retrieval=args.retrieval))
     except ValueError as exc:
         ap.error(str(exc))
     finally:

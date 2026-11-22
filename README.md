@@ -98,7 +98,9 @@ comes from, and how much that document outranks another (authority).
     (Relate's full-text index and vector index, fused by reciprocal rank), then lets the graph decide the
     value, so a question gets the answer in force with its reason, not the best-matching text.
     The vectors come from a small built-in hashing embedder (no model, no key): it handles word forms and
-    typos but not true synonyms; pass your own embedder for those. `python eval/compare_retrieval.py` compares
+    typos but not true synonyms. For synonyms there is an optional trained model, `pip install "supersede[embed]"`
+    (fastembed, ONNX, no PyTorch): `Store(embedder=FastEmbedEmbedder())`, or try
+    `python examples/ask.py "How many minutes until the coating has hardened?" --embedder model --retrieval vector`. `python eval/compare_retrieval.py` compares
     full-text, vector and hybrid (see [docs/EVIDENCE.md](docs/EVIDENCE.md)).
   * **Time:** `answer(..., as_of=date)` answers for a past date. Effective dates are taken at face
     value and any missing, unreadable, future or out-of-order date is reported, never guessed.
@@ -138,7 +140,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 176 tests (175 without an API key: one live test is skipped)
+python -m pytest -q                          # 180 tests; 176 run on a plain install (the live-API test and 3 optional-model tests are skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```

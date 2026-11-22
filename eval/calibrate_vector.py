@@ -18,9 +18,9 @@ from load_corpus import CORPUS_DIR, load_docs, read_corpus, read_topics  # noqa:
 from supersede.store import Store  # noqa: E402
 
 
-def scores() -> tuple[list[tuple[str, bool, float]], list[float]]:
+def scores(embedder=None) -> tuple[list[tuple[str, bool, float]], list[float]]:
     cal = yaml.safe_load((HERE / "calibration.yaml").read_text(encoding="utf-8"))
-    store = Store()
+    store = Store(embedder=embedder)
     try:
         load_docs(store, read_corpus(CORPUS_DIR), read_topics(CORPUS_DIR))
         on = []
@@ -39,7 +39,14 @@ def scores() -> tuple[list[tuple[str, bool, float]], list[float]]:
 
 
 def main() -> int:
-    on, off = scores()
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__.split(chr(10) * 2)[0])
+    ap.add_argument("--embedder", choices=("hash", "model"), default="hash")
+    emb = None
+    if ap.parse_args().embedder == "model":
+        from supersede.embed_model import FastEmbedEmbedder
+        emb = FastEmbedEmbedder()
+    on, off = scores(emb)
     right = [sc for _, ok, sc in on if ok]
     print(f"on-topic: {len(right)}/{len(on)} have the right topic first; their scores: "
           f"{min(right):.3f}..{max(right):.3f}" if right else "no on-topic hit")
@@ -55,7 +62,7 @@ def main() -> int:
         print(f"{t:>9.2f} {kept:>10}/{len(on)} {rej:>15}/{len(off)}")
         if best is None or (kept + rej, -t) > best[0]:
             best = ((kept + rej, -t), t)
-    print(f"\nbest total on this set: {best[1]:.2f}  (Store.MIN_VECTOR_SCORE is {Store.MIN_VECTOR_SCORE})")
+    print(f"\nbest total on this set: {best[1]:.2f}  (the default Store.MIN_VECTOR_SCORE is {Store.MIN_VECTOR_SCORE})")
     return 0
 
 

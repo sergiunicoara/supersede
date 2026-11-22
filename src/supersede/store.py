@@ -414,6 +414,10 @@ class Store:
     MIN_VECTOR_SCORE = 0.70
     RRF_K = 60  # reciprocal rank fusion constant
 
+    def _min_vector_score(self) -> float:
+        """The score below which a vector hit is ignored: the embedder's own calibrated value if it has one."""
+        return getattr(self._embedder, "min_score", self.MIN_VECTOR_SCORE)
+
     def _fulltext_hits(self, terms: list[str], limit: int) -> list[dict[str, Any]] | None:
         """Topics ranked by BM25 over their descriptions; None if the store has no full-text index."""
         try:
@@ -501,12 +505,12 @@ class Store:
             vscore = {f"{h['subject']}.{h['predicate']}": h["score"] for h in vh}
             for h in self._combine_hits(" ".join(terms), self._embedder.embed(question), 10):
                 key = f"{h['subject']}.{h['predicate']}"
-                if key in ft_rank or vscore.get(key, 0.0) >= self.MIN_VECTOR_SCORE:
+                if key in ft_rank or vscore.get(key, 0.0) >= self._min_vector_score():
                     ranked[key] = {**h, "rrf": h["score"], "fulltext_rank": ft_rank.get(key),
                                    "vector_score": round(vscore[key], 3) if key in vscore else None}
         for rank, h in enumerate(ft or [] if retrieval != "combine" else [], 1):
             add(h, rank, "fulltext_rank", rank)
-        for rank, h in enumerate([h for h in (vh or []) if h["score"] >= self.MIN_VECTOR_SCORE]
+        for rank, h in enumerate([h for h in (vh or []) if h["score"] >= self._min_vector_score()]
                                  if retrieval != "combine" else [], 1):
             add(h, rank, "vector_score", round(h["score"], 3))
         if not ranked:
