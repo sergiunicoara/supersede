@@ -80,8 +80,29 @@ hashing embedder cannot know. Hybrid is never worse than full-text on either set
 misses are different from vector's. Relate's own `COMBINE` (weighted reciprocal rank fusion, `RELATE_PREVIEW=hybrid-search`,
 `Store(combine=True)`) was added as an opt-in and scores 37: it fuses all ten vector hits, including weak ones, while my fusion
 first drops vector hits below the calibrated threshold, so on this corpus the Python fusion is slightly better. `COMBINE` has
-no minimum score, so the same threshold gates its results. A trained embedding model would help with synonyms and is not
-included.
+no minimum score, so the same threshold gates its results. A trained embedding model helps with synonyms: see the next subsection.
+
+**Optional trained model** (`pip install "supersede[embed]"`, `python eval/compare_retrieval.py --embedder model`; fastembed
+with `BAAI/bge-small-en-v1.5`, 384 dimensions, run locally). Its minimum vector score (0.85) was chosen on the separate
+calibration set, where on-topic questions scored 0.88 to 0.97 and off-topic ones 0.72 to 0.83. The third question set,
+`retrieval_synonyms` (20 questions, 3 off-topic), was written before the model was ever run on it, with expected answers
+taken from the graph rather than from any retrieval mode.
+
+| Retrieval (exact answers) | `retrieval` (23) | `retrieval_variants` (18) | `retrieval_synonyms` (20) | total (61) |
+|---|---|---|---|---|
+| hashing embedder, hybrid (the default) | 23 | 16 | 14 | 53 |
+| model, full-text only | 23 | 15 | 14 | 52 |
+| model, **vector only** | **23** | **18** | **19** | **60** |
+| model, hybrid (my fusion) | 23 | 17 | 18 | 58 |
+| model, Relate `COMBINE` | 23 | 16 | 18 | 57 |
+
+What this does and does not show. With the model, vector-only is best, and hybrid is *not*: exact-word matches from the
+full-text index sometimes outvote a correct vector hit. The synonym set is blind to the model, but the other two sets are
+not: I had already seen the hashing embedder miss "bake" and word-form questions, so their gain is informed, and only the
+synonym column is a clean test. Twenty questions is a small sample; the model's one miss ("lacquer layer", which scores
+under the 0.85 cut-off and is therefore rejected) shows the threshold cost. The model needs a download on first use and
+more memory, so the live demo and the committed store keep the hashing embedder; a store must be built and queried with
+the same embedder, and `ask.py --embedder model` builds an in-memory store from the corpus for that reason.
 
 13 "what was in force on this date" questions, including the mistyped-date and missing-date documents:
 **Supersede 13/13** against 11/13 for "the newest fact dated on or before that day". Effective dates are taken at

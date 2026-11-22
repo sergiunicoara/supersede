@@ -84,7 +84,7 @@ Relate connections are thread-affine but an MCP server calls tools from worker t
 work on one dedicated thread. Writes are strict: unknown ids, a reused fact id, a non-integer authority or a cycle
 raise instead of silently doing nothing. Documents load from annotated Markdown, and an optional extraction tool
 proposes facts from plain prose, with guard rails (a fixed vocabulary, a verbatim quote that must appear in the
-text, rejections listed and never written, and a human-review copy). The suite has 176 tests, and CI runs on
+text, rejections listed and never written, and a human-review copy). The suite has 180 tests (176 run on a plain install; the rest need an API key or the optional model), and CI runs on
 Linux, macOS and Windows with Python 3.10 to 3.13.
 
 ## Does it work? The numbers, and how to read them
@@ -132,8 +132,7 @@ longer in force. Everything, with the blind runs, is in `docs/EVIDENCE.md`.
 ## What's next
 
 Value normalisation (`2 years` = `two years`); extracting revision links from the text itself, not only facts;
-company-internal documents in place of public regulations; per-subject authority rules; and a trained embedding model
-behind the existing embedder interface for true synonyms.
+company-internal documents in place of public regulations; per-subject authority rules; and making the optional trained embedding model (already available as an extra) the default where it can be installed.
 
 ## Try it
 

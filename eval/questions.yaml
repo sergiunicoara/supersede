@@ -113,3 +113,28 @@ retrieval_variants:
   - {id: v16, question: "Who manages the canteen contract?", expected_key: null, expected_status: no_match}
   - {id: v17, question: "What is the guest Wi-Fi called?", expected_key: null, expected_status: no_match}
   - {id: v18, question: "Which parking spots are reserved for visitors?", expected_key: null, expected_status: no_match}
+
+# Written BEFORE the optional model embedder was ever run on these questions. They are true synonyms and
+# paraphrases (client/defect, vendor, lacquer, harden, instruments...), chosen to share few words with the topic
+# descriptions. Expected answers come from answer() for each key, not from any retrieval mode.
+retrieval_synonyms:
+  - {id: s01, question: "How many hours do we have to inform the client about a defect?", expected_key: customer_notification.hours, expected_status: agreed, expected_value: "24"}
+  - {id: s02, question: "How often do we examine our vendors?", expected_key: supplier_audit.frequency, expected_status: agreed, expected_value: "annual"}
+  - {id: s03, question: "How many days of warning does a vendor get before we visit their premises?", expected_key: supplier_audit.on_site_notice_days, expected_status: agreed, expected_value: "7"}
+  - {id: s04, question: "How thick must the lacquer layer be?", expected_key: paint_line.film_thickness_um, expected_status: resolved, expected_value: "70-90"}
+  - {id: s05, question: "How many minutes until the coating has hardened?", expected_key: paint_line.cure_time_min, expected_status: agreed, expected_value: "35"}
+  - {id: s06, question: "What proportion of finished goods do we check at the end of the line?", expected_key: final_inspection.sampling, expected_status: resolved, expected_value: "AQL 0.65"}
+  - {id: s07, question: "For how long do we archive end-of-line check results?", expected_key: final_inspection.record_retention, expected_status: agreed, expected_value: "5 years"}
+  - {id: s08, question: "Which document do checkers use to log the outcome of the last check?", expected_key: final_inspection.record_form, expected_status: agreed, expected_value: "FORM-9"}
+  - {id: s09, question: "How frequently are measuring instruments verified?", expected_key: gauge_calibration.interval, expected_status: agreed, expected_value: "6 months"}
+  - {id: s10, question: "After how many pieces do we replace the cutters in the machining cell?", expected_key: machining_cell.tool_change_interval, expected_status: unresolved}
+  - {id: s11, question: "How fast should the switch between products on line 3 be?", expected_key: line_3.changeover_target_min, expected_status: unresolved}
+  - {id: s12, question: "How long does the oven have to warm up before charging it?", expected_key: furnace_loading.preheat_minutes, expected_status: agreed, expected_value: "30"}
+  - {id: s13, question: "What is the heaviest load a furnace tray can carry?", expected_key: furnace_loading.max_basket_kg, expected_status: agreed, expected_value: "300"}
+  - {id: s14, question: "How hard should we tighten the screws on the engine cover?", expected_key: fastening.cover_bolt_torque, expected_status: agreed, expected_value: "24 Nm"}
+  - {id: s15, question: "Is a screw-securing adhesive mandatory?", expected_key: fastening.thread_locker, expected_status: unknown}
+  - {id: s16, question: "Can a component that leaks be tested again?", expected_key: leak_test.retest_allowed, expected_status: unknown}
+  - {id: s17, question: "At what air pressure do we check for leaks?", expected_key: leak_test.pressure_bar, expected_status: agreed, expected_value: "2.5"}
+  - {id: s18, question: "Where is the nearest first-aid kit?", expected_key: null, expected_status: no_match}
+  - {id: s19, question: "How many holidays do staff get each year?", expected_key: null, expected_status: no_match}
+  - {id: s20, question: "Which shift does the maintenance crew work?", expected_key: null, expected_status: no_match}
