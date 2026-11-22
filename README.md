@@ -140,7 +140,7 @@ python -m venv .venv && . .venv/bin/activate   # Windows PowerShell: .venv\Scrip
 pip install -e ".[dev]"
 
 python examples/seed_demo.py demo.relate     # small fictional demo knowledge base
-python -m pytest -q                          # 180 tests; 176 run on a plain install (the live-API test and 3 optional-model tests are skipped)
+python -m pytest -q                          # 192 tests; 188 run on a plain install (the live-API test and 3 optional-model tests are skipped)
 python examples/mcp_smoke.py demo.relate     # spawns the MCP server and calls it as an agent would
 python eval/run_eval.py                      # 19 questions: Supersede vs a naive baseline and two ablations
 ```

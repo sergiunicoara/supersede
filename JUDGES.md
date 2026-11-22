@@ -55,4 +55,4 @@ decides the value, and it gives the reason and what it overruled.
 | Real text, not fictional | [docs/EVIDENCE.md](docs/EVIDENCE.md) sections 4 and 5 (eCFR regulations, FDA guidance) |
 | An agent using it | `docs/agent_transcript.md` (a real Claude agent over MCP) |
 | What it does **not** do | README "Limits" and EVIDENCE section 7: mostly fictional data, strings not meaning, hashing embedder misses true synonyms |
-| Tests | `python -m pytest -q` (180 tests, 176 on a plain install; CI runs Linux, macOS, Windows, Python 3.10 to 3.13) |
+| Tests | `python -m pytest -q` (192 tests, 188 on a plain install; CI runs Linux, macOS, Windows, Python 3.10 to 3.13) |

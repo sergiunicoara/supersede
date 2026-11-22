@@ -84,7 +84,7 @@ Relate connections are thread-affine but an MCP server calls tools from worker t
 work on one dedicated thread. Writes are strict: unknown ids, a reused fact id, a non-integer authority or a cycle
 raise instead of silently doing nothing. Documents load from annotated Markdown, and an optional extraction tool
 proposes facts from plain prose, with guard rails (a fixed vocabulary, a verbatim quote that must appear in the
-text, rejections listed and never written, and a human-review copy). The suite has 180 tests (176 run on a plain install; the rest need an API key or the optional model), and CI runs on
+text, rejections listed and never written, and a human-review copy). The suite has 192 tests (188 run on a plain install; the rest need an API key or the optional model), and CI runs on
 Linux, macOS and Windows with Python 3.10 to 3.13.
 
 ## Does it work? The numbers, and how to read them
