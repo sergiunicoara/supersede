@@ -10,6 +10,7 @@ ties, dates). The default store is the committed demo store, opened read-only.
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import sys
 
@@ -20,6 +21,15 @@ from supersede.store import Store  # noqa: E402
 
 DEFAULT_DB = ROOT / "examples" / "store" / "supersede-demo.relate"
 
+if os.name == "nt":
+    os.system("")  # enables ANSI escape processing in the Windows console
+_COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ  # no colour when piped, or when NO_COLOR is set
+_CODES = {"bold": "1", "dim": "2", "red": "31", "green": "32", "yellow": "33", "cyan": "36"}
+
+
+def paint(text: str, *styles: str) -> str:
+    return "\x1b[" + ";".join(_CODES[x] for x in styles) + "m" + text + "\x1b[0m" if _COLOR else text
+
 
 def show(r: dict) -> None:
     print(f"question : {r['question']}")
@@ -27,19 +37,19 @@ def show(r: dict) -> None:
         print(f"result   : {r['status']}: {r['reason']}")
         return
     m, a = r["matched"], r["answer"]
-    print(f"topic    : {m['subject']} / {m['predicate']}  (fused retrieval score {m['score']})")
+    print(f"topic    : {paint(m['subject'] + ' / ' + m['predicate'], 'cyan')}  (fused retrieval score {m['score']})")
     print(f"           {m['description']}")
     print(f"status   : {a['status']}" + (f"   as of {a['as_of']}" if "as_of" in a else ""))
     if a["status"] in ("resolved", "agreed"):
-        print(f"value    : {a['value']}   from {a.get('source') or ', '.join(a['sources'])}")
+        print(f"value    : {paint(a['value'], 'green', 'bold')}   from {a.get('source') or ', '.join(a['sources'])}")
     if "reason" in a:
         print(f"reason   : {a['reason']}")
     for o in a.get("overruled", []):
-        print(f"overruled: {o['value']!r} ({o['rev']}, authority {o['authority']})")
+        print(f"overruled: {paint(repr(o['value']), 'yellow')} ({o['rev']}, authority {o['authority']})")
     for c in a.get("candidates", []):
-        print(f"candidate: {c['value']!r} ({c['rev']}, authority {c['authority']})")
+        print(f"candidate: {paint(repr(c['value']), 'yellow')} ({c['rev']}, authority {c['authority']})")
     for s in r.get("stale_sources", []):
-        print(f"STALE    : {s['revision']} was written from {s['source']}, replaced by {', '.join(s['replaced_by'])}")
+        print(paint(f"STALE    : {s['revision']} was written from {s['source']}, replaced by {', '.join(s['replaced_by'])}", "red", "bold"))
     for w in a.get("warnings", []):
         print(f"date note: {w['revision']}: {w['detail']}")
     if r["alternatives"]:
